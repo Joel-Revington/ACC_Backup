@@ -1,11 +1,16 @@
 async function getJSON(url) {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-        alert('Could not load tree data. See console for more details.');
-        console.error(await resp.text());
+    try{
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            alert('Could not load tree data. See console for more details.');
+            console.error(await resp.text());
+            return [];
+        }
+        return await resp.json();
+    } catch(err){
+        console.log(err);
         return [];
     }
-    return resp.json();
 }
 
 function createTreeNode(id, text, icon, children = false) {
@@ -14,18 +19,21 @@ function createTreeNode(id, text, icon, children = false) {
 
 async function getHubs() {
     const hubs = await getJSON('/api/hubs');
-    const backup = await getJSON('/api/aps/backup')
-    console.log(backup);
+    console.log(hubs);
+    const backup = await fetch('/api/aps/backup')
+    console.log(backup.body);
     return hubs.map(hub => createTreeNode(`hub|${hub.id}`, hub.attributes.name, 'icon-hub', true));
 }
 
 async function getProjects(hubId) {
     const projects = await getJSON(`/api/hubs/${hubId}/projects`);
+    console.log("Projects data",projects);
     return projects.map(project => createTreeNode(`project|${hubId}|${project.id}`, project.attributes.name, 'icon-project', true));
 }
 
 async function getContents(hubId, projectId, folderId = null) {
     const contents = await getJSON(`/api/hubs/${hubId}/projects/${projectId}/contents` + (folderId ? `?folder_id=${folderId}` : ''));
+    console.log("contents", contents);
     return contents.map(item => {
         if (item.type === 'folders') {
             return createTreeNode(`folder|${hubId}|${projectId}|${item.id}`, item.attributes.displayName, 'icon-my-folder', true);
