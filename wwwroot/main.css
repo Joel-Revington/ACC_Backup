@@ -24,6 +24,8 @@ body, html {
     top: 3em;
     bottom: 0;
     overflow-y: scroll;
+    background-color: #222831 ;
+    color: aliceblue;
 }
 
 #preview {
@@ -89,4 +91,33 @@ body, html {
 .icon-version:before {
     background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/clock-16.svg);
     background-size: cover;
+}
+
+
+/* ----dropdown styles== */
+
+.custom-dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 10;
+    max-height: 350px;
+    width: 300px;
+    overflow: scroll;
+}
+.dropdown-content div {
+    padding: 12px 16px;
+    cursor: pointer;
+}
+.dropdown-content div:hover {
+    background-color: #f1f1f1;
+}
+.custom-dropdown.show .dropdown-content {
+    display: block;
 }

@@ -41,14 +41,14 @@ router.get('/api/hubs/:hub_id/projects/:project_id/contents/:item_id/versions', 
     }
 });
 
-router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
-    try {
-        const accessToken = req.internalOAuthToken.access_token;
-        const message = await backupData(accessToken);
-        res.send(message);
-    } catch (err) {
-        next(err);
-    }
-});
+// router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
+//     try {
+//         const accessToken = req.internalOAuthToken.access_token;
+//         const message = await backupData(accessToken);
+//         res.send(message);
+//     } catch (err) {
+//         next(err);
+//     }
+// });
 
 module.exports = router;

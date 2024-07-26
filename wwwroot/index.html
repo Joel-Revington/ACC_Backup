@@ -16,8 +16,24 @@
     <div id="header">
         <img class="logo" src="https://cdn.autodesk.io/logo/black/stacked.png" alt="Autodesk Platform Services">
         <span class="title">Hubs Browser</span>
+        <!-- ==== -->
+        <select id="hubsDropdown">
+            <option value="">Select Hub</option>
+        </select>
+        <div id="projectsDropdown" class="custom-dropdown">
+            <button onclick="toggleDropdown()">Select Projects</button>
+            <div id="projectsContainer" class="dropdown-content"></div>
+        </div>
+        <select id="contentsDropdown" onchange="loadContents(this.value)">
+            <option value="">Select Content</option>
+        </select>
+        <select id="versionsDropdown">
+            <option value="">Select Version</option>
+        </select>
+        <!-- ===== -->
         <button id="login" style="visibility: hidden;">Login</button>
     </div>
+    
     <div id="sidebar">
         <div id="tree"></div>
     </div>
@@ -27,6 +43,22 @@
     <script src="https://unpkg.com/inspire-tree@4.3.1/dist/inspire-tree.js"></script>
     <script src="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-dom.min.js"></script>
     <script src="/main.js" type="module"></script>
+    <script>
+        function toggleDropdown() {
+            document.getElementById("projectsDropdown").classList.toggle("show");
+        }
+        window.onclick = function(event) {
+            if (!event.target.matches('#projectsDropdown button')) {
+                const dropdowns = document.getElementsByClassName("dropdown-content");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    const openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 
 </html>
