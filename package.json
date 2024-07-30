@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Autodesk Platform Services application built by following the Hubs Browser tutorial from https://aps.autodesk.com/tutorials.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "babel server.js --out-file dist/server.js"
   },
   "keywords": [
     "autodesk-platform-services"
@@ -17,5 +18,10 @@
     "cookie-session": "^1.4.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.24.8",
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.2"
   }
 }
