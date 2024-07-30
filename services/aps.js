@@ -10,6 +10,8 @@ const dataManagementClient = new DataManagementClient(sdkManager);
 const service = module.exports = {};
 const fs = require('fs')
 const path = require('path');
+const os = require('os')
+const homeDir = os.homedir();
 
 service.getAuthorizationUrl = () => authenticationClient.authorize(APS_CLIENT_ID, ResponseType.Code, APS_CALLBACK_URL, [
     Scopes.DataRead,
@@ -131,7 +133,6 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
         if (item.type === 'folders') {
             const subFolderId = item.id;
             const sanitizedFolderId = sanitizeName(item.attributes?.name);
-            console.log(sanitizedFolderId);
             const subFolderPath = path.join(folderPath, sanitizedFolderId);
 
             if (!fs.existsSync(subFolderPath)) {
@@ -143,16 +144,14 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
             const itemId = item.id;
             const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
             for (const version of itemVersions) {
-                console.log("version", version.relationships?.storage);
                 const fileName = sanitizeName(version.attributes.name);
-                try{
+                try {
                     const fileUrl = version?.relationships?.storage?.meta?.link?.href;
                     const filePath = path.join(folderPath, fileName);
-                    console.log("version", fileName, filePath, fileUrl);
                     await downloadFile(fileUrl, filePath, accessToken);
-                } catch(err){
+                } catch (err) {
                     console.log(err);
-                    continue
+                    continue;
                 }
             }
         }
@@ -160,7 +159,6 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
 }
 
 service.backupData = async (accessToken) => {
-    console.log(accessToken);
     const hubs = await service.getHubs(accessToken);
     const backupData = {};
 
@@ -170,7 +168,7 @@ service.backupData = async (accessToken) => {
         const projects = await service.getProjects(hubId, accessToken);
         backupData[sanitizedHubName] = projects;
 
-        const hubPath = path.join(__dirname, "..", "backup", sanitizedHubName);
+        const hubPath = path.join(homeDir, "backup", sanitizedHubName);
         if (!fs.existsSync(hubPath)) {
             fs.mkdirSync(hubPath, { recursive: true });
         }
@@ -191,23 +189,55 @@ service.backupData = async (accessToken) => {
                     const folderId = content.id;
                     const sanitizedFolderId = sanitizeName(content.attributes?.name);
                     const folderPath = path.join(projectPath, sanitizedFolderId);
-                    // const folderContents = await service.getProjectContents(hubId, projectId, folderId, accessToken);
-                    // console.log(folderContents);
-                    // backupData[sanitizedHubName][sanitizedProjectName][sanitizedFolderId] = folderContents;
 
                     if (!fs.existsSync(folderPath)) {
                         fs.mkdirSync(folderPath, { recursive: true });
                     }
-                    console.log("project", sanitizedProjectName);
                     await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
                 }
             }
         }
     }
 
-    fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
+    // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
     return 'Backup completed successfully.';
 };
+
+service.backupSpecificData = async (accessToken, hubId, projectId) => {
+    const backupData = {};
+    const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
+    const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
+
+    const hubPath = path.join(homeDir, "backup", sanitizedHubName);
+    if (!fs.existsSync(hubPath)) {
+        fs.mkdirSync(hubPath, { recursive: true });
+    }
+
+    const projectPath = path.join(hubPath, sanitizedProjectName);
+    const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
+    backupData[sanitizedHubName] = { [sanitizedProjectName]: projectContents };
+
+    if (!fs.existsSync(projectPath)) {
+        fs.mkdirSync(projectPath, { recursive: true });
+    }
+
+    for (const content of projectContents) {
+        if (content.type === 'folders') {
+            const folderId = content.id;
+            const sanitizedFolderId = sanitizeName(content.attributes.name);
+            const folderPath = path.join(projectPath, sanitizedFolderId);
+
+            if (!fs.existsSync(folderPath)) {
+                fs.mkdirSync(folderPath, { recursive: true });
+            }
+            await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
+        }
+    }
+
+    // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
+    return 'Backup of selected hub and project completed successfully.';
+};
+
 
 service.getItemVersions = async (projectId, itemId, accessToken) => {
     const resp = await dataManagementClient.getItemVersions(accessToken, projectId, itemId);

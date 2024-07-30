@@ -2,110 +2,106 @@ import { initViewer, loadModel } from './viewer.js';
 import { initTree } from './sidebar.js';
 
 const login = document.getElementById('login');
+const backupAll = document.getElementById('backup-all');
+const backupSelected = document.getElementById('backup-selected');
+const hubSelect = document.getElementById('hub-select');
+const projectSelect = document.getElementById('project-select');
 
-// Async function to fetch JSON data from a given URL
-async function getJSON(url) {
+async function fetchHubs() {
     try {
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            alert('Could not load data. See console for more details.');
-            console.error(await resp.text());
-            return [];
+        const response = await fetch('/api/hubs');
+        if (response.ok) {
+            const hubs = await response.json();
+            hubs.forEach(hub => {
+                const option = document.createElement('option');
+                option.value = hub.id;
+                option.text = hub.attributes.name;
+                hubSelect.appendChild(option);
+            });
+        } else {
+            console.error('Failed to fetch hubs');
         }
-        return await resp.json();
     } catch (err) {
-        console.log(err);
-        return [];
+        console.error('Error fetching hubs:', err);
     }
 }
 
-// Function to populate a dropdown with options
-function populateDropdown(dropdown, items, defaultOptionText) {
-    dropdown.innerHTML = `<option value="">${defaultOptionText}</option>`;
-    items.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = item.attributes.name || item.attributes.displayName || item.attributes.createTime;
-        dropdown.appendChild(option);
-    });
-}
-
-// Function to populate a container with checkboxes
-function populateCheckboxContainer(container, items) {
-    container.innerHTML = '';
-    items.forEach(item => {
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = item.id;
-        checkbox.id = `project_${item.id}`;
-
-        const label = document.createElement('label');
-        label.htmlFor = `project_${item.id}`;
-        label.textContent = item.attributes.name;
-
-        const div = document.createElement('div');
-        div.appendChild(checkbox);
-        div.appendChild(label);
-        container.appendChild(div);
-    });
-}
-
-// Function to load hubs and populate the hubs dropdown
-async function loadHubs() {
-    const hubs = await getJSON('/api/hubs');
-    console.log('Hubs:', hubs);
-    const hubsDropdown = document.getElementById('hubsDropdown');
-    populateDropdown(hubsDropdown, hubs, 'Select Hub');
-}
-
-// Function to load projects and populate the projects container
-async function loadProjects(hubId) {
-    if (!hubId) return;
-    const projects = await getJSON(`/api/hubs/${hubId}/projects`);
-    console.log('Projects:', projects);
-    const projectsContainer = document.getElementById('projectsContainer');
-    populateCheckboxContainer(projectsContainer, projects);
-}
-
-// Function to load contents based on selected projects
-async function loadContents() {
-    const selectedProjectIds = Array.from(document.querySelectorAll('#projectsContainer input:checked')).map(input => input.value);
-    if (selectedProjectIds.length === 0) return;
-
-    const hubId = document.getElementById('hubsDropdown').value;
-    let allContents = [];
-    for (const projectId of selectedProjectIds) {
-        const contents = await getJSON(`/api/hubs/${hubId}/projects/${projectId}/contents`);
-        allContents = allContents.concat(contents);
+async function fetchProjects(hubId) {
+    try {
+        const response = await fetch(`/api/hubs/${hubId}/projects`);
+        if (response.ok) {
+            const projects = await response.json();
+            projectSelect.innerHTML = '';
+            projects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.id;
+                option.text = project.attributes.name;
+                projectSelect.appendChild(option);
+            });
+        } else {
+            console.error('Failed to fetch projects');
+        }
+    } catch (err) {
+        console.error('Error fetching projects:', err);
     }
-    console.log('Contents:', allContents);
-    const contentsDropdown = document.getElementById('contentsDropdown');
-    populateDropdown(contentsDropdown, allContents, 'Select Content');
 }
 
-// Function to load versions based on selected content
-async function loadVersions(itemId) {
-    if (!itemId) return;
-    const hubId = document.getElementById('hubsDropdown').value;
-    const projectId = document.querySelector('#projectsContainer input:checked').value;
-    const versions = await getJSON(`/api/hubs/${hubId}/projects/${projectId}/contents/${itemId}/versions`);
-    console.log('Versions:', versions);
-    const versionsDropdown = document.getElementById('versionsDropdown');
-    populateDropdown(versionsDropdown, versions, 'Select Version');
+// Function to handle the backup process for all hubs and projects
+async function handleBackupAll() {
+    console.log('BackUp All button clicked');
+    try {
+        const response = await fetch('/api/aps/backup', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.ok) {
+            const message = await response.text();
+            alert(message);
+        } else {
+            const errorText = await response.text();
+            console.error('Backup failed:', errorText);
+            alert(`Backup failed: ${errorText}`);
+        }
+    } catch (err) {
+        console.error('Error during backup:', err);
+        alert('Backup process encountered an error. See console for more details.');
+    }
 }
 
-document.getElementById('hubsDropdown').addEventListener('change', function () {
-    loadProjects(this.value);
+// Function to handle the backup process for selected hub and project
+async function handleBackupSelected() {
+    const hubId = hubSelect.value;
+    const projectId = projectSelect.value;
+    console.log(`BackUp Selected button clicked for hub: ${hubId}, project: ${projectId}`);
+    try {
+        const response = await fetch(`/api/aps/backup?hub_id=${hubId}&project_id=${projectId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.ok) {
+            const message = await response.text();
+            alert(message);
+        } else {
+            const errorText = await response.text();
+            console.error('Backup failed:', errorText);
+            alert(`Backup failed: ${errorText}`);
+        }
+    } catch (err) {
+        console.error('Error during backup:', err);
+        alert('Backup process encountered an error. See console for more details.');
+    }
+}
+
+hubSelect.addEventListener('change', () => {
+    fetchProjects(hubSelect.value);
 });
 
-document.getElementById('projectsContainer').addEventListener('change', function () {
-    loadContents();
-});
-
-document.getElementById('contentsDropdown').addEventListener('change', function () {
-    loadVersions(this.value);
-});
-
+backupAll.addEventListener('click', handleBackupAll);
+backupSelected.addEventListener('click', handleBackupSelected);
 
 try {
     const resp = await fetch('/api/auth/profile');
@@ -124,16 +120,7 @@ try {
         }
         const viewer = await initViewer(document.getElementById('preview'));
         initTree('#tree', (id) => loadModel(viewer, window.btoa(id).replace(/=/g, '')));
-        // Initial load of hubs
-        loadHubs();
-
-        // Load the selected model when a version is selected
-        document.getElementById('versionsDropdown').addEventListener('change', function () {
-            const versionId = this.value;
-            if (versionId) {
-                loadModel(viewer, window.btoa(versionId).replace(/=/g, ''));
-            }
-        });
+        await fetchHubs();
     } else {
         login.innerText = 'Login';
         login.onclick = () => window.location.replace('/api/auth/login');

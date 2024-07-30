@@ -1,5 +1,5 @@
 const express = require('express');
-const { authRefreshMiddleware, getHubs, getProjects, getProjectContents, getItemVersions, backupData } = require('../services/aps.js');
+const { authRefreshMiddleware, getHubs, getProjects, getProjectContents, getItemVersions, backupData, backupSpecificData } = require('../services/aps.js');
 
 let router = express.Router();
 
@@ -41,14 +41,21 @@ router.get('/api/hubs/:hub_id/projects/:project_id/contents/:item_id/versions', 
     }
 });
 
-// router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
-//     try {
-//         const accessToken = req.internalOAuthToken.access_token;
-//         const message = await backupData(accessToken);
-//         res.send(message);
-//     } catch (err) {
-//         next(err);
-//     }
-// });
+router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
+    console.log('Backup process initiated');
+    try {
+        const accessToken = req.internalOAuthToken.access_token;
+        if (req.query.hub_id && req.query.project_id) {
+            const message = await backupSpecificData(accessToken, req.query.hub_id, req.query.project_id);
+            res.send(message);
+        } else {
+            const message = await backupData(accessToken);
+            res.send(message);
+        }
+    } catch (err) {
+        console.error('Error during backup process:', err);
+        res.status(500).send('Backup process encountered an error.');
+    }
+});
 
 module.exports = router;

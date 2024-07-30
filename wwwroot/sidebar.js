@@ -20,8 +20,8 @@ function createTreeNode(id, text, icon, children = false) {
 async function getHubs() {
     const hubs = await getJSON('/api/hubs');
     console.log(hubs);
-    const backup = await fetch('/api/aps/backup')
-    console.log(backup.body);
+    // const backup = await fetch('/api/aps/backup')
+    // console.log(backup.body);
     return hubs.map(hub => createTreeNode(`hub|${hub.id}`, hub.attributes.name, 'icon-hub', true));
 }
 
