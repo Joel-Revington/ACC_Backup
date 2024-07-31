@@ -11,7 +11,7 @@ const service = module.exports = {};
 const fs = require('fs')
 const path = require('path');
 const os = require('os')
-const homeDir = os.homedir();
+const archiver = require("archiver")
 
 service.getAuthorizationUrl = () => authenticationClient.authorize(APS_CLIENT_ID, ResponseType.Code, APS_CALLBACK_URL, [
     Scopes.DataRead,
@@ -168,7 +168,7 @@ service.backupData = async (accessToken) => {
         const projects = await service.getProjects(hubId, accessToken);
         backupData[sanitizedHubName] = projects;
 
-        const hubPath = path.join(homeDir, "backup", sanitizedHubName);
+        const hubPath = path.join("/tmp", "backup", sanitizedHubName);
         if (!fs.existsSync(hubPath)) {
             fs.mkdirSync(hubPath, { recursive: true });
         }
@@ -198,17 +198,35 @@ service.backupData = async (accessToken) => {
             }
         }
     }
+    const zipFilePath = '/tmp/backup.zip'
+    await zipDirectory('/tmp/backup', zipFilePath)
 
     // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
-    return 'Backup completed successfully.';
+    return zipFilePath;
 };
+
+async function zipDirectory(source, out) {
+    const archive = archiver('zip', { zlib: { level: 9 }});
+    const stream = fs.createWriteStream(out);
+
+    return new Promise((resolve, reject) => {
+        archive
+            .directory(source, false)
+            .on('error', err => reject(err))
+            .pipe(stream)
+        ;
+
+        stream.on('close', () => resolve());
+        archive.finalize();
+    });
+}
 
 service.backupSpecificData = async (accessToken, hubId, projectId) => {
     const backupData = {};
     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
 
-    const hubPath = path.join(homeDir, "backup", sanitizedHubName);
+    const hubPath = path.join("/tmp", "backup", sanitizedHubName);
     if (!fs.existsSync(hubPath)) {
         fs.mkdirSync(hubPath, { recursive: true });
     }
@@ -233,9 +251,12 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
             await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
         }
     }
-
+    const zipFilePath = '/tmp/backup.zip';
+    await zipDirectory('/tmp/backup', zipFilePath);
+    
+    return zipFilePath;
     // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
-    return 'Backup of selected hub and project completed successfully.';
+    // return 'Backup of selected hub and project completed successfully.';
 };
 
 

@@ -6,6 +6,15 @@ const backupAll = document.getElementById('backup-all');
 const backupSelected = document.getElementById('backup-selected');
 const hubSelect = document.getElementById('hub-select');
 const projectSelect = document.getElementById('project-select');
+const spinner = document.getElementById('spinner');
+
+function showSpinner() {
+    spinner.style.display = 'block';
+}
+
+function hideSpinner() {
+    spinner.style.display = 'none';
+}
 
 async function fetchHubs() {
     try {
@@ -49,6 +58,7 @@ async function fetchProjects(hubId) {
 // Function to handle the backup process for all hubs and projects
 async function handleBackupAll() {
     console.log('BackUp All button clicked');
+    showSpinner();
     try {
         const response = await fetch('/api/aps/backup', {
             method: 'GET',
@@ -57,8 +67,14 @@ async function handleBackupAll() {
             }
         });
         if (response.ok) {
-            const message = await response.text();
-            alert(message);
+            const blob = await response.blob(); 
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'backup.zip'; 
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link); 
         } else {
             const errorText = await response.text();
             console.error('Backup failed:', errorText);
@@ -67,6 +83,8 @@ async function handleBackupAll() {
     } catch (err) {
         console.error('Error during backup:', err);
         alert('Backup process encountered an error. See console for more details.');
+    } finally{
+        hideSpinner()
     }
 }
 
@@ -75,6 +93,7 @@ async function handleBackupSelected() {
     const hubId = hubSelect.value;
     const projectId = projectSelect.value;
     console.log(`BackUp Selected button clicked for hub: ${hubId}, project: ${projectId}`);
+    showSpinner()
     try {
         const response = await fetch(`/api/aps/backup?hub_id=${hubId}&project_id=${projectId}`, {
             method: 'GET',
@@ -83,8 +102,14 @@ async function handleBackupSelected() {
             }
         });
         if (response.ok) {
-            const message = await response.text();
-            alert(message);
+            const blob = await response.blob(); 
+            const url = window.URL.createObjectURL(blob); 
+            const link = document.createElement('a'); 
+            link.href = url;
+            link.download = 'backup.zip'; 
+            document.body.appendChild(link); 
+            link.click();
+            document.body.removeChild(link);
         } else {
             const errorText = await response.text();
             console.error('Backup failed:', errorText);
@@ -93,6 +118,8 @@ async function handleBackupSelected() {
     } catch (err) {
         console.error('Error during backup:', err);
         alert('Backup process encountered an error. See console for more details.');
+    } finally {
+        hideSpinner()
     }
 }
 
