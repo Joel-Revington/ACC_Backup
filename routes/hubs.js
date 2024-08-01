@@ -43,7 +43,7 @@ router.get('/api/hubs/:hub_id/projects/:project_id/contents/:item_id/versions', 
     }
 });
 
-const tmpDir = 'C:\\tmp';
+// const tmpDir = 'C:\\tmp';
 
 function deleteFile(filePath) {
     return new Promise((resolve, reject) => {
@@ -58,7 +58,7 @@ function deleteFile(filePath) {
     });
 }
 
-function deleteDirectory(directoryPath) {
+function deleteFilesInDirectory(directoryPath) {
     return new Promise((resolve, reject) => {
         fs.readdir(directoryPath, (err, files) => {
             if (err) {
@@ -73,7 +73,7 @@ function deleteDirectory(directoryPath) {
                         if (err) {
                             rej(err);
                         } else if (stats.isDirectory()) {
-                            deleteDirectory(filePath).then(res).catch(rej);
+                            deleteFilesInDirectory(filePath).then(res).catch(rej);
                         } else {
                             deleteFile(filePath).then(res).catch(rej);
                         }
@@ -81,21 +81,14 @@ function deleteDirectory(directoryPath) {
                 });
             });
             Promise.all(fileDeletions).then(() => {
-                fs.rmdir(directoryPath, (err) => {
-                    if (err) {
-                        console.error('Error deleting directory:', err);
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
+                resolve();
             }).catch(reject);
         });
     });
 }
 
 function cleanUpTempFiles() {
-    deleteDirectory(tmpDir).then(() => {
+    deleteFilesInDirectory('./tmp').then(() => {
         console.log('Temporary files cleaned up successfully.');
     }).catch(err => {
         console.error('Error during cleanup:', err);
