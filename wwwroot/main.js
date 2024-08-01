@@ -78,11 +78,9 @@ async function handleBackupAll() {
         } else {
             const errorText = await response.text();
             console.error('Backup failed:', errorText);
-            alert(`Backup failed: ${errorText}`);
         }
     } catch (err) {
         console.error('Error during backup:', err);
-        alert('Backup process encountered an error. See console for more details.');
     } finally{
         hideSpinner()
     }
@@ -113,11 +111,9 @@ async function handleBackupSelected() {
         } else {
             const errorText = await response.text();
             console.error('Backup failed:', errorText);
-            alert(`Backup failed: ${errorText}`);
         }
     } catch (err) {
         console.error('Error during backup:', err);
-        alert('Backup process encountered an error. See console for more details.');
     } finally {
         hideSpinner()
     }
@@ -154,6 +150,5 @@ try {
     }
     login.style.visibility = 'visible';
 } catch (err) {
-    alert('Could not initialize the application. See console for more details.');
     console.error(err);
 }

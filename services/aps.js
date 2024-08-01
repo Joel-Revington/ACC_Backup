@@ -261,6 +261,10 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
 
 
 service.getItemVersions = async (projectId, itemId, accessToken) => {
-    const resp = await dataManagementClient.getItemVersions(accessToken, projectId, itemId);
-    return resp.data;
+    try{
+        const resp = await dataManagementClient.getItemVersions(accessToken, projectId, itemId);
+        return resp.data;
+    } catch (err){
+        console.log(err)
+    }
 };
