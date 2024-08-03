@@ -2,14 +2,23 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      #installs dependencies for the code
+      - echo Logging in to Amazon ECR
+      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 339713031143.dkr.ecr.ap-south-1.amazonaws.com 
+      - echo installing dependencies for the code
       - npm install
   build:
     commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t acc_backup
+      - docker tag acc_backup:latest 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
     # builds a code in a folder called dist
-      - npm run build
+      # - npm run build
   post_build:
     commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
 artifacts:
   files:
     - '**/*'
