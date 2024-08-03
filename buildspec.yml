@@ -10,7 +10,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - docker build -t acc_backup
+      - docker build -t acc_backup .
       - docker tag acc_backup:latest 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
     # builds a code in a folder called dist
       # - npm run build
