@@ -1,27 +1,27 @@
 version: 0.0
 os: linux
 files:
-  - source: /
-    destination: /ACC_Backup/
+  - source: /ACC_Backup/
+    destination: /var/www/html/
 
 permissions:
-  - object: /ACC_Backup/
+  - object: /var/www/html/
     pattern: "*"
     owner: ubuntu
     group: ubuntu
 
 hooks:
   BeforeInstall:
-    - location: scripts/before_install.sh
+    - location: /ACC_Backup/scripts/before_install.sh
       timeout: 1000
       runas: root
   
   AfterInstall:
-    - location: scripts/after_install.sh
+    - location: /ACC_Backup/scripts/after_install.sh
       timeout: 1500
       runas: root
 
   ApplicationStart:
-    - location: scripts/app_start.sh
+    - location: /ACC_Backup/scripts/app_start.sh
       timeout: 301
       runas: root
