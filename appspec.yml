@@ -12,16 +12,16 @@ permissions:
 
 hooks:
   BeforeInstall:
-    - location: /ACC_Backup/scripts/before_install.sh
+    - location: /home/ubuntu/ACC_Backup/scripts/before_install.sh
       timeout: 1000
       runas: root
   
   AfterInstall:
-    - location: /ACC_Backup/scripts/after_install.sh
+    - location: /home/ubuntu/ACC_Backup/scripts/after_install.sh
       timeout: 1500
       runas: root
 
   ApplicationStart:
-    - location: /ACC_Backup/scripts/app_start.sh
+    - location: /home/ubuntu/ACC_Backup/scripts/app_start.sh
       timeout: 301
       runas: root
