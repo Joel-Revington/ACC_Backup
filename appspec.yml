@@ -24,4 +24,4 @@ hooks:
   ApplicationStart:
     - location: /home/ubuntu/ACC_Backup/scripts/app_start.sh
       timeout: 301
-      runas: root
+      runas: ubuntu
