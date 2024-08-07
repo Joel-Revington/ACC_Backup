@@ -2,10 +2,10 @@ version: 0.0
 os: linux
 files:
   - source: /
-    destination: /ACC_Backup/
+    destination: /home/ubuntu/ACC_Backup
 
 permissions:
-  - object: /ACC_Backup/
+  - object: /home/ubuntu/ACC_Backup
     pattern: "*"
     owner: ubuntu
     group: ubuntu
