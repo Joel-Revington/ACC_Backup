@@ -7,9 +7,5 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - APS_CLIENT_ID=${APS_CLIENT_ID}
-      - APS_CLIENT_SECRET=${APS_CLIENT_SECRET}
-      - APS_CALLBACK_URL=${APS_CALLBACK_URL}
-      - SERVER_SESSION_SECRET=${SERVER_SESSION_SECRET}
       - NODE_ENV=production
     restart: always
