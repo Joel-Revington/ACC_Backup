@@ -29,7 +29,7 @@ docker-compose down
 docker-compose pull
 
 # Start the Docker container using Docker Compose with an external .env file
-docker-compose --env-file /.env up -d
+docker-compose --env-file .env up -d
 
 # Restart NGINX to apply any new configuration
 systemctl restart nginx
