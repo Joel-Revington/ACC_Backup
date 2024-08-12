@@ -20,7 +20,7 @@ phases:
       - echo Pushing the Docker image...
       - docker push 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
       - echo Deploying with Docker Compose...
-      - docker-compose down
+      - docker-compose down || true
       - docker-compose pull
       - docker-compose up -d
 artifacts:
