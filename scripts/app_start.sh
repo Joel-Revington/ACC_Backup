@@ -1,18 +1,13 @@
 #!/bin/bash
-# Stop and remove the existing container
-docker stop acc_backup || true
-docker rm acc_backup || true
 
-# Remove existing Docker image
-docker rmi 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest || true
+# Navigate to the project directory
+cd /home/ubuntu/ACC_Backup
 
-#!/bin/bash
-# Pull the latest Docker image from ECR
-docker pull 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
+# Bring down any existing containers
+docker-compose down
 
-#!/bin/bash
-# Run the Docker container
-docker run -d --name acc_backup -p 80:80 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
+# Pull the latest image and start the container
+docker-compose up -d
 
 # Restart NGINX to apply any new configuration
 systemctl restart nginx
