@@ -8,6 +8,8 @@ RUN npm install
 
 COPY . .
 
+RUN mkdir -p ./tmp
+
 EXPOSE 8080
 
 CMD [ "node", "server.js" ]
