@@ -6,17 +6,6 @@ services:
     container_name: acc_backup
     ports:
       - "8080:8080"
-    build:
-      context: .
-      args:
-        APS_CLIENT_ID: ${APS_CLIENT_ID}
-        APS_CLIENT_SECRET: ${APS_CLIENT_SECRET}
-        APS_CALLBACK_URL: ${APS_CALLBACK_URL}
-        SERVER_SESSION_SECRET: ${SERVER_SESSION_SECRET}
     environment:
       - NODE_ENV=production
-      - APS_CLIENT_ID=${APS_CLIENT_ID}
-      - APS_CLIENT_SECRET=${APS_CLIENT_SECRET}
-      - APS_CALLBACK_URL=${APS_CALLBACK_URL}
-      - SERVER_SESSION_SECRET=${SERVER_SESSION_SECRET}
     restart: always
