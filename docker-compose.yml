@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  acc_backup:
+    image: 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
+    container_name: acc_backup
+    ports:
+      -8080:8080
+    command: ["node", "server.js"]
