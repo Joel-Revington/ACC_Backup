@@ -6,11 +6,6 @@ phases:
       - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 339713031143.dkr.ecr.ap-south-1.amazonaws.com 
       - echo installing dependencies for the code
       - npm install
-      - echo Fetching parameters from Parameter Store
-      - export APS_CLIENT_ID=$(aws ssm get-parameter --name "/APS_CLIENT_ID" --query "Parameter.Value" --output text)
-      - export APS_CLIENT_SECRET=$(aws ssm get-parameter --name "/APS_CLIENT_SECRET" --query "Parameter.Value" --output text)
-      - export APS_CALLBACK_URL=$(aws ssm get-parameter --name "/APS_CALLBACK_URL" --query "Parameter.Value" --output text)
-      - export SERVER_SESSION_SECRET=$(aws ssm get-parameter --name "/SERVER_SESSION_SECRET" --query "Parameter.Value" --output text)
   build:
     commands:
       - echo Build started on `date`
