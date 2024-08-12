@@ -4,7 +4,9 @@
 cd /home/ubuntu/ACC_Backup
 
 # Bring down any existing containers
-docker-compose down
+docker-compose down || true
+
+docker-compose pull
 
 # Pull the latest image and start the container
 docker-compose up -d
