@@ -20,13 +20,13 @@
 #!/bin/bash
 
 # Navigate to the project directory
-cd /home/ubuntu/ACC_Backup
+cd /home/ubuntu/ACC_Backup1
 
 # Stop and remove the existing containers if any
-docker-compose down
+docker-compose down || true
 
 # Pull the latest Docker image from ECR
-docker-compose pull 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
+docker-compose pull
 
 # Start the Docker container using Docker Compose with an external .env file
 docker-compose up -d
