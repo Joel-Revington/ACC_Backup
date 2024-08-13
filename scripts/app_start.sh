@@ -26,10 +26,10 @@ cd /home/ubuntu/ACC_Backup1
 docker-compose down
 
 # Pull the latest Docker image from ECR
-docker-compose pull
+docker pull 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
 
 # Start the Docker container using Docker Compose with an external .env file
-docker-compose --env-file .env up -d
+docker-compose up -d
 
 # Restart NGINX to apply any new configuration
 systemctl restart nginx
