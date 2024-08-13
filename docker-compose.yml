@@ -6,4 +6,6 @@ services:
     container_name: acc_backup
     ports:
       - "8080:8080"
-    command: ["node", "server.js"]
+    environment:
+      - NODE_ENV="production"
+    restart: always

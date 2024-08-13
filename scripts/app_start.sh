@@ -20,7 +20,7 @@
 #!/bin/bash
 
 # Navigate to the project directory
-cd /home/ubuntu/ACC_Backup1
+cd /home/ubuntu/ACC_Backup
 
 # Stop and remove the existing containers if any
 docker-compose down
