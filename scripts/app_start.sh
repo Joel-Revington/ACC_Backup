@@ -22,14 +22,16 @@
 # Navigate to the project directory
 cd /home/ubuntu/ACC_Backup1
 
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 339713031143.dkr.ecr.ap-south-1.amazonaws.com
+
 # Stop and remove the existing containers if any
-docker-compose down || true
+# docker-compose down || true
 
 # Pull the latest Docker image from ECR
-docker-compose pull
+docker compose pull
 
 # Start the Docker container using Docker Compose with an external .env file
-docker-compose up -d
+docker compose up -d
 
 # Restart NGINX to apply any new configuration
-systemctl restart nginx
+sudo systemctl restart nginx

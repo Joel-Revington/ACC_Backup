@@ -19,9 +19,6 @@ phases:
       - echo Build completed on `date`
       - echo Pushing the Docker image...
       - docker push 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
-      - docker-compose down || true
-      - docker-compose pull
-      - docker-compose up -d
 artifacts:
   files:
     - '**/*'
