@@ -26,7 +26,7 @@ cd /home/ubuntu/ACC_Backup
 docker-compose down
 
 # Pull the latest Docker image from ECR
-docker pull 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
+docker-compose pull 339713031143.dkr.ecr.ap-south-1.amazonaws.com/acc_backup:latest
 
 # Start the Docker container using Docker Compose with an external .env file
 docker-compose up -d

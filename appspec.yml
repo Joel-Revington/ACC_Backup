@@ -2,10 +2,10 @@ version: 0.0
 os: linux
 files:
   - source: /
-    destination: /home/ubuntu/ACC_Backup
+    destination: /home/ubuntu/ACC_Backup1
 
 permissions:
-  - object: /home/ubuntu/ACC_Backup
+  - object: /home/ubuntu/ACC_Backup1
     pattern: "*"
     owner: ubuntu
     group: ubuntu
@@ -22,6 +22,6 @@ hooks:
   #     runas: root
 
   ApplicationStart:
-    - location: scripts/app_start.sh
+    - location: /home/ubuntu/ACC_Backup/scripts/app_start.sh
       timeout: 301
       runas: root
