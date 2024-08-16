@@ -170,7 +170,7 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
     }
 }
 
-service.backupData = async (accessToken, res) => {
+service.backupData = async (accessToken) => {
     const hubs = await service.getHubs(accessToken);
     const backupData = {};
 
@@ -227,24 +227,11 @@ service.backupData = async (accessToken, res) => {
             }
         }
     }
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const zipFilePath = '/tmp/backup.zip'
+    await zipDirectory('/tmp/backup', zipFilePath)
 
-    res.attachment('backup.zip');
-
-    archive.on('error', (err) => {
-        throw err;
-    });
-
-    archive.pipe(res);
-
-    archive.directory('/tmp/backup', false);
-
-    archive.finalize();
-    // const zipFilePath = '/tmp/backup.zip'
-    // await zipDirectory('/tmp/backup', zipFilePath)
-
-    // // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
-    // return zipFilePath;
+    // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
+    return zipFilePath;
 };
 
 async function zipDirectory(source, out) {
@@ -293,7 +280,7 @@ async function zipDirectory(source, out) {
     });
 }
 
-service.backupSpecificData = async (accessToken, hubId, projectId, res) => {
+service.backupSpecificData = async (accessToken, hubId, projectId) => {
     const backupData = {};
     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
@@ -339,23 +326,10 @@ service.backupSpecificData = async (accessToken, hubId, projectId, res) => {
             await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
         }
     }
-    const archive = archiver('zip', { zlib: { level: 9 } });
-
-    res.attachment('backup.zip');
-
-    archive.on('error', (err) => {
-        throw err;
-    });
-
-    archive.pipe(res);
-
-    archive.directory('/tmp/backup', false);
-
-    archive.finalize();
-    // const zipFilePath = '/tmp/backup.zip';
-    // await zipDirectory('/tmp/backup', zipFilePath);
+    const zipFilePath = '/tmp/backup.zip';
+    await zipDirectory('/tmp/backup', zipFilePath);
     
-    // return zipFilePath;
+    return zipFilePath;
     // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
     // return 'Backup of selected hub and project completed successfully.';
 };
