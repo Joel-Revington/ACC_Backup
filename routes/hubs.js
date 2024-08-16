@@ -43,7 +43,7 @@ router.get('/api/hubs/:hub_id/projects/:project_id/contents/:item_id/versions', 
     }
 });
 
-const tmpDir = path.join(os.homedir(), 'tmp');
+// const tmpDir = 'C:\\tmp';
 
 function deleteFile(filePath) {
     return new Promise((resolve, reject) => {
