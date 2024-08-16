@@ -109,7 +109,7 @@ router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
             const hub = hubs.find(h => h.id === req.query.hub_id);
             const hubName = hub ? hub.attributes.name : 'backup';
             const sanitizedHubName = sanitizeName(hubName);
-            zipFilePath = await backupSpecificData(accessToken, req.query.hub_id, req.query.project_id);
+            zipFilePath = await backupSpecificData(accessToken, req.query.hub_id, req.query.project_id, res);
             const zipFileName = `${sanitizedHubName}.zip`
             res.download(zipFilePath, zipFileName, (err) => {
                 if(err){
@@ -119,7 +119,7 @@ router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
                 }
             })
         } else {
-            zipFilePath = await backupData(accessToken);
+            zipFilePath = await backupData(accessToken, res);
             res.download(zipFilePath, "backup.zip", (err) => {
                 if(err){
                     res.status(500).send("Error Downloading")

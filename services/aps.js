@@ -170,7 +170,7 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
     }
 }
 
-service.backupData = async (accessToken) => {
+service.backupData = async (accessToken, res) => {
     const hubs = await service.getHubs(accessToken);
     const backupData = {};
 
@@ -293,7 +293,7 @@ async function zipDirectory(source, out) {
     });
 }
 
-service.backupSpecificData = async (accessToken, hubId, projectId) => {
+service.backupSpecificData = async (accessToken, hubId, projectId, res) => {
     const backupData = {};
     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
