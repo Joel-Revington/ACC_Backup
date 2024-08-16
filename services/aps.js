@@ -244,10 +244,39 @@ async function zipDirectory(source, out) {
         .on('error', err => reject(err))
         .pipe(stream)
         ;
+
+        stream.on('close', () => {
+            console.log(`Archive ${out} has been finalized and the output file descriptor has closed.`);
+            resolve();
+        });
+
+        stream.on('end', () => {
+            console.log('Data has been drained');
+        });
+
+        stream.on('warning', (err) => {
+            if (err.code === 'ENOENT') {
+                console.warn('Archiver warning:', err);
+            } else {
+                reject(err);
+            }
+        });
+
+        stream.on('error', err => {
+            console.error('Stream error:', err);
+            reject(err);
+        });
+
+        archive.finalize()
+            .then(() => console.log('Archiver finalized successfully'))
+            .catch(err => {
+                console.error('Error finalizing archive:', err);
+                reject(err);
+            });
         
-        stream.on('close', () => resolve());
-        archive.finalize();
-        console.log(archive.finalize());
+        // stream.on('close', () => resolve());
+        // archive.finalize();
+        // console.log(archive.finalize());
     });
 }
 
