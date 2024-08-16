@@ -125,7 +125,6 @@ async function downloadFile(url, filePath, accessToken) {
                 Authorization: `Bearer ${accessToken}`
             }
         });
-        console.log("response", response);
         
         return new Promise((resolve, reject) => {
             const writer = fs.createWriteStream(filePath);
@@ -134,6 +133,7 @@ async function downloadFile(url, filePath, accessToken) {
             writer.on('error', reject);
         });
     } else {
+        console.log("Unsupported Version");
         return ("Unsupported Version")
     }
 }
