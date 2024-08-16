@@ -115,6 +115,7 @@ function normalizePath(path) {
 }
 
 async function downloadFile(url, filePath, accessToken) {
+    console.log({"url":url, "filePath":filePath});
     const response = await axios({
         method: 'GET',
         url: url,
@@ -151,6 +152,7 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
             const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
             for (const version of itemVersions) {
                 const fileName = sanitizeName(version.attributes.name);
+                console.log(fileName);
                 try {
                     const fileUrl = version?.relationships?.storage?.meta?.link?.href;
                     const filePath = path.join(folderPath, fileName);
@@ -269,13 +271,14 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
         const sanitizedContentName = content.attributes.displayName
         if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
             const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
+            console.log(nestedProjectPath);
             if (!fs.existsSync(nestedProjectPath)) {
                 fs.mkdirSync(nestedProjectPath, { recursive: true });
             }
             const folderId = content.id;
             const sanitizedFolderId = sanitizeName(content.attributes.name);
             const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
-
+            console.log(folderPath);
             if (!fs.existsSync(folderPath)) {
                 fs.mkdirSync(folderPath, { recursive: true });
             }
