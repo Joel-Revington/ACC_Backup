@@ -116,21 +116,26 @@ function normalizePath(path) {
 
 async function downloadFile(url, filePath, accessToken) {
     console.log({"url":url, "filePath":filePath});
-    const response = await axios({
-        method: 'GET',
-        url: url,
-        responseType: 'stream',
-        headers: {
-            Authorization: `Bearer ${accessToken}`
-        }
-    });
-
-    return new Promise((resolve, reject) => {
-        const writer = fs.createWriteStream(filePath);
-        response.data.pipe(writer);
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-    });
+    if(url !== undefined){
+        const response = await axios({
+            method: 'GET',
+            url: url,
+            responseType: 'stream',
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        console.log("response", response);
+        
+        return new Promise((resolve, reject) => {
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+    } else {
+        return ("Unsupported Version")
+    }
 }
 
 async function backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData) {
