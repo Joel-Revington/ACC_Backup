@@ -115,7 +115,6 @@ function normalizePath(path) {
 }
 
 async function downloadFile(url, filePath, accessToken) {
-    console.log({"url":url, "filePath":filePath});
     if(url !== undefined){
         const response = await axios({
             method: 'GET',
@@ -236,6 +235,7 @@ service.backupData = async (accessToken) => {
 };
 
 async function zipDirectory(source, out) {
+    console.log(source, out);
     const archive = archiver('zip', { zlib: { level: 9 }});
     const stream = fs.createWriteStream(out);
 
@@ -276,14 +276,12 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
         const sanitizedContentName = content.attributes.displayName
         if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
             const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
-            console.log(nestedProjectPath);
             if (!fs.existsSync(nestedProjectPath)) {
                 fs.mkdirSync(nestedProjectPath, { recursive: true });
             }
             const folderId = content.id;
             const sanitizedFolderId = sanitizeName(content.attributes.name);
             const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
-            console.log(folderPath);
             if (!fs.existsSync(folderPath)) {
                 fs.mkdirSync(folderPath, { recursive: true });
             }
