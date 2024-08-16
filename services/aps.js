@@ -109,6 +109,11 @@ function sanitizeName(name) {
     return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').substring(0, 255);
 }
 
+function normalizePath(path) {
+    // Remove any extra spaces and normalize slashes
+    return path.trim().replace(/\/\s*$/, '').replace(/\/+/g, '/');
+}
+
 async function downloadFile(url, filePath, accessToken) {
     const response = await axios({
         method: 'GET',
@@ -128,6 +133,7 @@ async function downloadFile(url, filePath, accessToken) {
 }
 
 async function backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData) {
+    const normalizedFolderPath = normalizePath(folderPath)
     const folderContents = await service.getProjectContents(hubId, projectId, folderId, accessToken);
     for (const item of folderContents) {
         if (item.type === 'folders') {
@@ -169,6 +175,9 @@ service.backupData = async (accessToken) => {
         backupData[sanitizedHubName] = projects;
 
         const hubPath = path.join("/tmp", "backup", sanitizedHubName);
+        if (fs.existsSync("/tmp/backup")) {
+            fs.rmdirSync("/tmp/backup", { recursive: true });
+        }
         if (!fs.existsSync(hubPath)) {
             fs.mkdirSync(hubPath, { recursive: true });
         }
@@ -185,7 +194,21 @@ service.backupData = async (accessToken) => {
             }
 
             for (const content of projectContents) {
-                if (content.type === 'folders') {
+                const sanitizedContentName = content.attributes.displayName
+                if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
+                    const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
+                    if (!fs.existsSync(nestedProjectPath)) {
+                        fs.mkdirSync(nestedProjectPath, { recursive: true });
+                    }
+                    const folderId = content.id;
+                    const sanitizedFolderId = sanitizeName(content.attributes?.name);
+                    const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
+
+                    if (!fs.existsSync(folderPath)) {
+                        fs.mkdirSync(folderPath, { recursive: true });
+                    }
+                    await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
+                } else {
                     const folderId = content.id;
                     const sanitizedFolderId = sanitizeName(content.attributes?.name);
                     const folderPath = path.join(projectPath, sanitizedFolderId);
@@ -227,6 +250,9 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
 
     const hubPath = path.join("/tmp", "backup", sanitizedHubName);
+    if (fs.existsSync("/tmp/backup")) {
+        fs.rmdirSync("/tmp/backup", { recursive: true });
+    }
     if (!fs.existsSync(hubPath)) {
         fs.mkdirSync(hubPath, { recursive: true });
     }
@@ -240,7 +266,21 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
     }
 
     for (const content of projectContents) {
-        if (content.type === 'folders') {
+        const sanitizedContentName = content.attributes.displayName
+        if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
+            const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
+            if (!fs.existsSync(nestedProjectPath)) {
+                fs.mkdirSync(nestedProjectPath, { recursive: true });
+            }
+            const folderId = content.id;
+            const sanitizedFolderId = sanitizeName(content.attributes.name);
+            const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
+
+            if (!fs.existsSync(folderPath)) {
+                fs.mkdirSync(folderPath, { recursive: true });
+            }
+            await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
+        } else {
             const folderId = content.id;
             const sanitizedFolderId = sanitizeName(content.attributes.name);
             const folderPath = path.join(projectPath, sanitizedFolderId);
