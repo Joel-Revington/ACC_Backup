@@ -235,9 +235,9 @@ service.backupData = async (accessToken) => {
 };
 
 async function zipDirectory(source, out) {
-    console.log(source, out);
     const archive = archiver('zip', { zlib: { level: 9 }});
     const stream = fs.createWriteStream(out);
+    console.log(archive, stream);
 
     return new Promise((resolve, reject) => {
         archive
