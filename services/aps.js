@@ -227,11 +227,24 @@ service.backupData = async (accessToken) => {
             }
         }
     }
-    const zipFilePath = '/tmp/backup.zip'
-    await zipDirectory('/tmp/backup', zipFilePath)
+    const archive = archiver('zip', { zlib: { level: 9 } });
 
-    // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
-    return zipFilePath;
+    res.attachment('backup.zip');
+
+    archive.on('error', (err) => {
+        throw err;
+    });
+
+    archive.pipe(res);
+
+    archive.directory('/tmp/backup', false);
+
+    archive.finalize();
+    // const zipFilePath = '/tmp/backup.zip'
+    // await zipDirectory('/tmp/backup', zipFilePath)
+
+    // // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
+    // return zipFilePath;
 };
 
 async function zipDirectory(source, out) {
@@ -326,10 +339,23 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
             await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
         }
     }
-    const zipFilePath = '/tmp/backup.zip';
-    await zipDirectory('/tmp/backup', zipFilePath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    res.attachment('backup.zip');
+
+    archive.on('error', (err) => {
+        throw err;
+    });
+
+    archive.pipe(res);
+
+    archive.directory('/tmp/backup', false);
+
+    archive.finalize();
+    // const zipFilePath = '/tmp/backup.zip';
+    // await zipDirectory('/tmp/backup', zipFilePath);
     
-    return zipFilePath;
+    // return zipFilePath;
     // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
     // return 'Backup of selected hub and project completed successfully.';
 };
