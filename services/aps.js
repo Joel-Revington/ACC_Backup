@@ -209,6 +209,7 @@ service.backupData = async (accessToken) => {
                     }
                     const folderId = content.id;
                     const sanitizedFolderId = sanitizeName(content.attributes?.name);
+                    console.log("sanitizedFolderId",sanitizedFolderId);
                     const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
 
                     if (!fs.existsSync(folderPath)) {
@@ -218,6 +219,7 @@ service.backupData = async (accessToken) => {
                 } else {
                     const folderId = content.id;
                     const sanitizedFolderId = sanitizeName(content.attributes?.name);
+                    console.log("sanitizedFolderId",sanitizedFolderId);
                     const folderPath = path.join(projectPath, sanitizedFolderId);
 
                     if (!fs.existsSync(folderPath)) {
@@ -282,6 +284,7 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
             }
             const folderId = content.id;
             const sanitizedFolderId = sanitizeName(content.attributes.name);
+            console.log("sanitizedFolderId",sanitizedFolderId);
             const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
             if (!fs.existsSync(folderPath)) {
                 fs.mkdirSync(folderPath, { recursive: true });
@@ -290,6 +293,7 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
         } else {
             const folderId = content.id;
             const sanitizedFolderId = sanitizeName(content.attributes.name);
+            console.log("sanitizedFolderId",sanitizedFolderId);
             const folderPath = path.join(projectPath, sanitizedFolderId);
 
             if (!fs.existsSync(folderPath)) {
