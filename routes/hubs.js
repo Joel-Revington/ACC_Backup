@@ -43,7 +43,7 @@ router.get('/api/hubs/:hub_id/projects/:project_id/contents/:item_id/versions', 
     }
 });
 
-// const tmpDir = 'C:\\tmp';
+const tmpDir = path.join(os.homedir(), 'tmp');
 
 function deleteFile(filePath) {
     return new Promise((resolve, reject) => {
@@ -88,11 +88,15 @@ function deleteFilesInDirectory(directoryPath) {
 }
 
 function cleanUpTempFiles() {
-    deleteFilesInDirectory('./tmp').then(() => {
-        console.log('Temporary files cleaned up successfully.');
-    }).catch(err => {
-        console.error('Error during cleanup:', err);
-    });
+    if(fs.existsSync(tmpDir)){
+        deleteFilesInDirectory(tmpDir).then(() => {
+            console.log('Temporary files cleaned up successfully.');
+        }).catch(err => {
+            console.error('Error during cleanup:', err);
+        });
+    } else {
+        console.log("Temporary Directory does not exist");
+    }
 }
 
 function sanitizeName(name) {

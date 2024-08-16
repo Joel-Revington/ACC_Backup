@@ -180,9 +180,10 @@ service.backupData = async (accessToken) => {
         const projects = await service.getProjects(hubId, accessToken);
         backupData[sanitizedHubName] = projects;
 
-        const hubPath = path.join("/tmp", "backup", sanitizedHubName);
-        if (fs.existsSync("/tmp/backup")) {
-            fs.rmdirSync("/tmp/backup", { recursive: true });
+        const hubPath = path.join(os.homedir(), "tmp", "backup", sanitizedHubName);
+        const tmpDir = path.join(os.homedir(), 'tmp');
+        if (fs.existsSync(`${tmpDir}/backup`)) {
+            fs.rmdirSync(`${tmpDir}/backup`, { recursive: true });
         }
         if (!fs.existsSync(hubPath)) {
             fs.mkdirSync(hubPath, { recursive: true });
@@ -227,8 +228,9 @@ service.backupData = async (accessToken) => {
             }
         }
     }
-    const zipFilePath = '/tmp/backup.zip'
-    await zipDirectory('/tmp/backup', zipFilePath)
+    // const zipFilePath = '/tmp/backup.zip'
+    const zipFilePath = path.join(os.homedir(), 'tmp', 'backup.zip');
+    await zipDirectory(path.join(tmpDir, 'backup'), zipFilePath)
 
     // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
     return zipFilePath;
@@ -258,6 +260,7 @@ async function zipDirectory(source, out) {
             if (err.code === 'ENOENT') {
                 console.warn('Archiver warning:', err);
             } else {
+                console.log(err)
                 reject(err);
             }
         });
@@ -285,9 +288,10 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
 
-    const hubPath = path.join("/tmp", "backup", sanitizedHubName);
-    if (fs.existsSync("/tmp/backup")) {
-        fs.rmdirSync("/tmp/backup", { recursive: true });
+    const hubPath = path.join(os.homedir(), "tmp", "backup", sanitizedHubName);
+    const tmpDir = path.join(os.homedir(), 'tmp');
+    if (fs.existsSync(`${tmpDir}/backup`)) {
+        fs.rmdirSync(`${tmpDir}/backup`, { recursive: true });
     }
     if (!fs.existsSync(hubPath)) {
         fs.mkdirSync(hubPath, { recursive: true });
@@ -326,8 +330,9 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
             await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
         }
     }
-    const zipFilePath = '/tmp/backup.zip';
-    await zipDirectory('/tmp/backup', zipFilePath);
+    // const zipFilePath = '/tmp/backup.zip';
+    const zipFilePath = path.join(os.homedir(), 'tmp', 'backup.zip');
+    await zipDirectory(path.join(tmpDir, 'backup'), zipFilePath);
     
     return zipFilePath;
     // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
