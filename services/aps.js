@@ -156,7 +156,6 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
             const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
             for (const version of itemVersions) {
                 const fileName = sanitizeName(version.attributes.name);
-                console.log(fileName);
                 try {
                     const fileUrl = version?.relationships?.storage?.meta?.link?.href;
                     const filePath = path.join(folderPath, fileName);
@@ -191,6 +190,7 @@ service.backupData = async (accessToken) => {
         for (const project of projects) {
             const projectId = project.id;
             const sanitizedProjectName = sanitizeName(project.attributes?.name);
+            console.log(sanitizedProjectName);
             const projectPath = path.join(hubPath, sanitizedProjectName);
             const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
             backupData[sanitizedHubName][sanitizedProjectName] = projectContents;
@@ -201,6 +201,7 @@ service.backupData = async (accessToken) => {
 
             for (const content of projectContents) {
                 const sanitizedContentName = content.attributes.displayName
+                console.log(sanitizedContentName);
                 if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
                     const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
                     if (!fs.existsSync(nestedProjectPath)) {
@@ -253,7 +254,8 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
     const backupData = {};
     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
-
+    console.log(sanitizedProjectName);
+    
     const hubPath = path.join("/tmp", "backup", sanitizedHubName);
     if (fs.existsSync("/tmp/backup")) {
         fs.rmdirSync("/tmp/backup", { recursive: true });
@@ -272,6 +274,7 @@ service.backupSpecificData = async (accessToken, hubId, projectId) => {
 
     for (const content of projectContents) {
         const sanitizedContentName = content.attributes.displayName
+        console.log(sanitizedContentName);
         if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
             const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
             if (!fs.existsSync(nestedProjectPath)) {
