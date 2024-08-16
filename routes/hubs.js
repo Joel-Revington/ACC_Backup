@@ -1,5 +1,4 @@
 const express = require('express');
-const os = require('os')
 const fs = require('fs');
 const path = require('path')
 const { authRefreshMiddleware, getHubs, getProjects, getProjectContents, getItemVersions, backupData, backupSpecificData } = require('../services/aps.js');
@@ -89,15 +88,11 @@ function deleteFilesInDirectory(directoryPath) {
 }
 
 function cleanUpTempFiles() {
-    if(fs.existsSync(tmpDir)){
-        deleteFilesInDirectory(tmpDir).then(() => {
-            console.log('Temporary files cleaned up successfully.');
-        }).catch(err => {
-            console.error('Error during cleanup:', err);
-        });
-    } else {
-        console.log("Temporary Directory does not exist");
-    }
+    deleteFilesInDirectory('./tmp').then(() => {
+        console.log('Temporary files cleaned up successfully.');
+    }).catch(err => {
+        console.error('Error during cleanup:', err);
+    });
 }
 
 function sanitizeName(name) {
