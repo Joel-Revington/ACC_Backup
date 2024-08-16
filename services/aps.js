@@ -170,7 +170,7 @@ async function backupFolderContents(hubId, projectId, folderId, folderPath, acce
     }
 }
 
-service.backupData = async (accessToken, res) => {
+service.backupData = async (accessToken) => {
     const hubs = await service.getHubs(accessToken);
     const backupData = {};
 
@@ -227,28 +227,26 @@ service.backupData = async (accessToken, res) => {
             }
         }
     }
+    const zipFilePath = '/tmp/backup.zip'
+    await zipDirectory('/tmp/backup', zipFilePath)
 
-    res.setHeader("Content-Type", "application/zip")
-    res.setHeader("Content-Disposition", "attachment; filename=backup.zip")
-    await zipDirectory('/tmp/backup', res)
-    // const zipFilePath = '/tmp/backup.zip'
-    // await zipDirectory('/tmp/backup', zipFilePath)
-
-    // // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
-    // return zipFilePath;
+    // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
+    return zipFilePath;
 };
 
-async function zipDirectory(source, stream) {
-    const archive = archiver('zip', { zlib: { level: 9 } });
-
+async function zipDirectory(source, out) {
+    const archive = archiver('zip', { zlib: { level: 9 }});
+    const stream = fs.createWriteStream(out);
+    
     return new Promise((resolve, reject) => {
         archive
-            .directory(source, false)
-            .on('error', err => reject(err))
-            .pipe(stream);
+        .directory(source, false)
+        .on('error', err => reject(err))
+        .pipe(stream)
+        ;
 
         stream.on('close', () => {
-            console.log('Archive has been finalized and the output stream has closed.');
+            console.log(`Archive ${out} has been finalized and the output file descriptor has closed.`);
             resolve();
         });
 
@@ -275,57 +273,14 @@ async function zipDirectory(source, stream) {
                 console.error('Error finalizing archive:', err);
                 reject(err);
             });
+        
+        // stream.on('close', () => resolve());
+        // archive.finalize();
+        // console.log(archive.finalize());
     });
 }
 
-
-// async function zipDirectory(source, out) {
-//     const archive = archiver('zip', { zlib: { level: 9 }});
-//     const stream = fs.createWriteStream(out);
-    
-//     return new Promise((resolve, reject) => {
-//         archive
-//         .directory(source, false)
-//         .on('error', err => reject(err))
-//         .pipe(stream)
-//         ;
-
-//         stream.on('close', () => {
-//             console.log(`Archive ${out} has been finalized and the output file descriptor has closed.`);
-//             resolve();
-//         });
-
-//         stream.on('end', () => {
-//             console.log('Data has been drained');
-//         });
-
-//         stream.on('warning', (err) => {
-//             if (err.code === 'ENOENT') {
-//                 console.warn('Archiver warning:', err);
-//             } else {
-//                 reject(err);
-//             }
-//         });
-
-//         stream.on('error', err => {
-//             console.error('Stream error:', err);
-//             reject(err);
-//         });
-
-//         archive.finalize()
-//             .then(() => console.log('Archiver finalized successfully'))
-//             .catch(err => {
-//                 console.error('Error finalizing archive:', err);
-//                 reject(err);
-//             });
-        
-//         // stream.on('close', () => resolve());
-//         // archive.finalize();
-//         // console.log(archive.finalize());
-//     });
-// }
-
-service.backupSpecificData = async (accessToken, hubId, projectId, res) => {
+service.backupSpecificData = async (accessToken, hubId, projectId) => {
     const backupData = {};
     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
@@ -371,13 +326,10 @@ service.backupSpecificData = async (accessToken, hubId, projectId, res) => {
             await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
         }
     }
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
-    await zipDirectory("/tmp/backup", res)
-    // const zipFilePath = '/tmp/backup.zip';
-    // await zipDirectory('/tmp/backup', zipFilePath);
+    const zipFilePath = '/tmp/backup.zip';
+    await zipDirectory('/tmp/backup', zipFilePath);
     
-    // return zipFilePath;
+    return zipFilePath;
     // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
     // return 'Backup of selected hub and project completed successfully.';
 };
