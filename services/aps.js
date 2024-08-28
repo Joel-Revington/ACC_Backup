@@ -301,12 +301,24 @@ const backupAllFileContent = async (
   
   service.backupSpecificData = async (
     req,
-    stream,
+    res,
     accessToken,
     hubId,
     projectId
   ) => {
-    const zip = new JSZip();
+    // const zip = new JSZip();
+    if (!accessToken) {
+        res.status(401).json({ error: "Access token is missing." });
+        return;
+      }
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
+      res.setHeader("Content-Type", "application/zip");
+      archive.on("error", (err) => {
+        throw err;
+      });
+      // Pipe the archive data to the response
+      archive.pipe(res);
     try {
       const hub = (await service.getHubs(accessToken)).find((h) => h.id === hubId);
       const sanitizedHubName = sanitizeName(hub.attributes.name);
@@ -326,7 +338,7 @@ const backupAllFileContent = async (
             hubId,
             projectId,
             content.id,
-            zip,
+            archive,
             sanitizedProjectName,
             accessToken
           );
@@ -336,7 +348,7 @@ const backupAllFileContent = async (
               hubId,
               projectId,
               content.id,
-              zip,
+              archive,
               sanitizedProjectName,
               accessToken
             ),
@@ -344,13 +356,14 @@ const backupAllFileContent = async (
           );
         }
       }
-      // Generate the zip file and pipe to the response
-      console.log("zipBuffer");
-      const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
-      stream.end(zipBuffer);
+      console.log("archiving");
+      archive.finalize();
+    //   // Generate the zip file and pipe to the response
+    //   console.log("zipBuffer");
+    //   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+    //   stream.end(zipBuffer);
     } catch (error) {
       console.error("Error during backup specific data:", error);
-      stream.destroy(); // End the stream on error
       throw new Error("Failed to backup specific data.");
     }
   };
@@ -359,7 +372,7 @@ const backupAllFileContent = async (
     hubId,
     projectId,
     itemId,
-    zip,
+    archive,
     projectName,
     accessToken
   ) => {
@@ -385,8 +398,10 @@ const backupAllFileContent = async (
             );
             continue;
           }
+          archive.append(response,{name:`${projectName}`})
+          console.log(`Added ${versionName} to archive.`);
           // Add each version of the file to the zip archive with a unique name
-          zip.file(`${projectName}/${version?.attributes?.name}`, response);
+        //   zip.file(`${projectName}/${version?.attributes?.name}`, response);
         }
       }
     } catch (error) {
@@ -398,7 +413,7 @@ const backupAllFileContent = async (
     hubId,
     projectId,
     folderId,
-    zip,
+    archive,
     basePath,
     accessToken
   ) => {
@@ -415,7 +430,7 @@ const backupAllFileContent = async (
             hubId,
             projectId,
             item.id,
-            zip,
+            archive,
             itemPath,
             accessToken
           );
@@ -425,7 +440,7 @@ const backupAllFileContent = async (
               hubId,
               projectId,
               item.id,
-              zip,
+              archive,
               itemPath,
               accessToken
             ),

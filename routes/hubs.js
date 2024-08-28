@@ -50,7 +50,7 @@ router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
     console.log('Backup process initiated');
     try {
         const accessToken = req.internalOAuthToken.access_token;
-        const passThrough = new PassThrough();
+        // const passThrough = new PassThrough();
 
         res.setHeader('Content-Disposition', 'attachment; filename=backup.zip');
         res.setHeader('Content-Type', 'application/zip');
@@ -62,10 +62,10 @@ router.get('/api/aps/backup', authRefreshMiddleware, async (req, res, next) => {
             const sanitizedHubName = sanitizeName(hubName);
 
             // Directly stream the ZIP for the specific hub and project
-            await backupSpecificData(req, passThrough, accessToken, req.query.hub_id, req.query.project_id);
-            passThrough.pipe(res).on('finish', () => {
-                console.log('Backup process completed successfully.');
-            });
+            await backupSpecificData(req, res, accessToken, req.query.hub_id, req.query.project_id);
+            // passThrough.pipe(res).on('finish', () => {
+            //     console.log('Backup process completed successfully.');
+            // });
         } else {
             // Directly stream the ZIP for all hubs and projects
             await backupData(req, res, accessToken);
