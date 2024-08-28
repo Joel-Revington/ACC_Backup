@@ -308,7 +308,7 @@ const backupAllFileContent = async (
   ) => {
     const zip = new JSZip();
     try {
-      const hub = (await getHubs(accessToken)).find((h) => h.id === hubId);
+      const hub = (await service.getHubs(accessToken)).find((h) => h.id === hubId);
       const sanitizedHubName = sanitizeName(hub.attributes.name);
       const project = (await service.getProjects(hubId, accessToken)).find(
         (p) => p.id === projectId
