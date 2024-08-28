@@ -1,4 +1,4 @@
-const axios = require("axios")
+const axios = require("axios");
 const { SdkManagerBuilder } = require('@aps_sdk/autodesk-sdkmanager');
 const { AuthenticationClient, Scopes, ResponseType } = require('@aps_sdk/authentication');
 const { DataManagementClient } = require('@aps_sdk/data-management');
@@ -8,10 +8,9 @@ const sdkManager = SdkManagerBuilder.create().build();
 const authenticationClient = new AuthenticationClient(sdkManager);
 const dataManagementClient = new DataManagementClient(sdkManager);
 const service = module.exports = {};
-const fs = require('fs')
-const path = require('path');
-const os = require('os')
-const archiver = require("archiver")
+const archiver = require("archiver");
+const { PassThrough } = require('stream');
+const JSZip = require('jszip')
 
 service.getAuthorizationUrl = () => authenticationClient.authorize(APS_CLIENT_ID, ResponseType.Code, APS_CALLBACK_URL, [
     Scopes.DataRead,
@@ -109,213 +108,471 @@ function sanitizeName(name) {
     return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').substring(0, 255);
 }
 
-function normalizePath(path) {
-    // Remove any extra spaces and normalize slashes
-    return path.trim().replace(/\/\s*$/, '').replace(/\/+/g, '/');
-}
+const withTimeout = (promise, timeoutMs) => {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('Operation timed out'));
+        }, timeoutMs);
 
-async function downloadFile(url, filePath, accessToken) {
-    if(url !== undefined){
-        const response = await axios({
-            method: 'GET',
-            url: url,
-            responseType: 'stream',
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        });
-        
-        return new Promise((resolve, reject) => {
-            const writer = fs.createWriteStream(filePath);
-            response.data.pipe(writer);
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        });
+        promise
+            .then((result) => {
+                clearTimeout(timeout);
+                resolve(result);
+            })
+            .catch((err) => {
+                clearTimeout(timeout);
+                reject(err);
+            });
+    });
+};
+
+
+async function downloadFile(url, accessToken) {
+    console.log(url);
+    if (url !== undefined) {
+        try{
+            const response = await axios({
+                method: 'GET',
+                url: url,
+                responseType: 'stream',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            });
+    
+            return response.data;
+        } catch(err) {
+            console.log(err);
+            return null;
+        }
     } else {
         console.log("Unsupported Version");
-        return ("Unsupported Version")
+        return null
     }
 }
 
-async function backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData) {
-    const normalizedFolderPath = normalizePath(folderPath)
-    const folderContents = await service.getProjectContents(hubId, projectId, folderId, accessToken);
-    for (const item of folderContents) {
-        if (item.type === 'folders') {
-            const subFolderId = item.id;
-            const sanitizedFolderId = sanitizeName(item.attributes?.name);
-            const subFolderPath = path.join(folderPath, sanitizedFolderId);
-
-            if (!fs.existsSync(subFolderPath)) {
-                fs.mkdirSync(subFolderPath, { recursive: true });
-            }
-
-            await backupFolderContents(hubId, projectId, subFolderId, subFolderPath, accessToken, backupData);
-        } else if (item.type === 'items') {
-            const itemId = item.id;
-            const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
-            for (const version of itemVersions) {
-                const fileName = sanitizeName(version.attributes.name);
-                try {
-                    const fileUrl = version?.relationships?.storage?.meta?.link?.href;
-                    const filePath = path.join(folderPath, fileName);
-                    await downloadFile(fileUrl, filePath, accessToken);
-                } catch (err) {
-                    console.log(err);
-                    continue;
-                }
-            }
-        }
-    }
-}
-
-service.backupData = async (accessToken) => {
-    const hubs = await service.getHubs(accessToken);
-    const backupData = {};
-
-    for (const hub of hubs) {
-        const hubId = hub.id;
-        const sanitizedHubName = sanitizeName(hub.attributes?.name);
-        const projects = await service.getProjects(hubId, accessToken);
-        backupData[sanitizedHubName] = projects;
-
-        const hubPath = path.join("/tmp", "backup", sanitizedHubName);
-        if (fs.existsSync("/tmp/backup")) {
-            fs.rmdirSync("/tmp/backup", { recursive: true });
-        }
-        if (!fs.existsSync(hubPath)) {
-            fs.mkdirSync(hubPath, { recursive: true });
-        }
-
-        for (const project of projects) {
-            const projectId = project.id;
-            const sanitizedProjectName = sanitizeName(project.attributes?.name);
-            console.log(sanitizedProjectName);
-            const projectPath = path.join(hubPath, sanitizedProjectName);
-            const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
-            backupData[sanitizedHubName][sanitizedProjectName] = projectContents;
-
-            if (!fs.existsSync(projectPath)) {
-                fs.mkdirSync(projectPath, { recursive: true });
-            }
-
-            for (const content of projectContents) {
-                const sanitizedContentName = content.attributes.displayName
-                console.log(sanitizedContentName);
-                if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
-                    const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
-                    if (!fs.existsSync(nestedProjectPath)) {
-                        fs.mkdirSync(nestedProjectPath, { recursive: true });
-                    }
-                    const folderId = content.id;
-                    const sanitizedFolderId = sanitizeName(content.attributes?.name);
-                    console.log("sanitizedFolderId",sanitizedFolderId);
-                    const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
-
-                    if (!fs.existsSync(folderPath)) {
-                        fs.mkdirSync(folderPath, { recursive: true });
-                    }
-                    await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
-                } else {
-                    const folderId = content.id;
-                    const sanitizedFolderId = sanitizeName(content.attributes?.name);
-                    console.log("sanitizedFolderId",sanitizedFolderId);
-                    const folderPath = path.join(projectPath, sanitizedFolderId);
-
-                    if (!fs.existsSync(folderPath)) {
-                        fs.mkdirSync(folderPath, { recursive: true });
-                    }
-                    await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
-                }
-            }
-        }
-    }
-    const zipFilePath = '/tmp/backup.zip'
-    await zipDirectory('/tmp/backup', zipFilePath)
-
-    // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
-    return zipFilePath;
-};
-
-async function zipDirectory(source, out) {
-    const archive = archiver('zip', { zlib: { level: 9 }});
-    const stream = fs.createWriteStream(out);
-    
-    return new Promise((resolve, reject) => {
-        archive
-        .directory(source, false)
-        .on('error', err => reject(err))
-        .pipe(stream)
-        ;
-        stream.on('close', () => resolve());
-        archive.finalize();
-    });
-}
-
-service.backupSpecificData = async (accessToken, hubId, projectId) => {
-    const backupData = {};
-    const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
-    const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
-    console.log(sanitizedProjectName);
-    
-    const hubPath = path.join("/tmp", "backup", sanitizedHubName);
-    if (fs.existsSync("/tmp/backup")) {
-        fs.rmdirSync("/tmp/backup", { recursive: true });
-    }
-    if (!fs.existsSync(hubPath)) {
-        fs.mkdirSync(hubPath, { recursive: true });
-    }
-
-    const projectPath = path.join(hubPath, sanitizedProjectName);
-    const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
-    backupData[sanitizedHubName] = { [sanitizedProjectName]: projectContents };
-
-    if (!fs.existsSync(projectPath)) {
-        fs.mkdirSync(projectPath, { recursive: true });
-    }
-
-    for (const content of projectContents) {
-        const sanitizedContentName = content.attributes.displayName
-        console.log(sanitizedContentName);
-        if (content.type === 'folders' && sanitizedProjectName === sanitizedContentName) {
-            const nestedProjectPath = path.join(projectPath, sanitizedProjectName)
-            if (!fs.existsSync(nestedProjectPath)) {
-                fs.mkdirSync(nestedProjectPath, { recursive: true });
-            }
-            const folderId = content.id;
-            const sanitizedFolderId = sanitizeName(content.attributes.name);
-            console.log("sanitizedFolderId",sanitizedFolderId);
-            const folderPath = path.join(nestedProjectPath, sanitizedFolderId);
-            if (!fs.existsSync(folderPath)) {
-                fs.mkdirSync(folderPath, { recursive: true });
-            }
-            await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
+const backupAllFileContent = async (
+    hubId,
+    projectId,
+    itemId,
+    archive,
+    projectName,
+    accessToken
+  ) => {
+    try {
+      const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
+      // Iterate over each version and back it up
+      for (const version of itemVersions) {
+        const versionName = sanitizeName(version.attributes.displayName);
+        const url = version?.relationships?.storage?.meta?.link?.href;
+        if (url === undefined) {
+          console.error(
+            `No download URL found for version of file ${versionName}. Skipping...`
+          );
+          continue;
         } else {
-            const folderId = content.id;
-            const sanitizedFolderId = sanitizeName(content.attributes.name);
-            console.log("sanitizedFolderId",sanitizedFolderId);
-            const folderPath = path.join(projectPath, sanitizedFolderId);
-
-            if (!fs.existsSync(folderPath)) {
-                fs.mkdirSync(folderPath, { recursive: true });
-            }
-            await backupFolderContents(hubId, projectId, folderId, folderPath, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
+          const response = await withTimeout(
+            downloadFile(url, accessToken),
+            15000
+          );
+          if (!response) {
+            console.log(
+              `Failed to download file for version of ${versionName}. Skipping...`
+            );
+            continue;
+          }
+          // Add each version of the file to the zip archive with a unique name
+          archive.append(response, { name: `${projectName}` });
+          console.log(`Added ${versionName} to archive.`);
+          // zip.file(`${projectName}/${version?.attributes?.name}`, response);
         }
+      }
+    } catch (error) {
+      console.error(`Error backing up file with ID ${itemId}:`, error);
     }
-    const zipFilePath = '/tmp/backup.zip';
-    await zipDirectory('/tmp/backup', zipFilePath);
-    
-    return zipFilePath;
-    // fs.writeFileSync('backup.json', JSON.stringify(backupData, null, 2));
-    // return 'Backup of selected hub and project completed successfully.';
-};
+  };
+  
+  const backupAllFolderContents = async (
+    hubId,
+    projectId,
+    folderId,
+    archive,
+    basePath,
+    accessToken
+  ) => {
+    try {
+      const folderContents = await withTimeout(
+        service.getProjectContents(hubId, projectId, folderId, accessToken),
+        15000
+      );
+      for (const item of folderContents) {
+        const itemName = sanitizeName(item.attributes?.displayName);
+        const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
+        if (item.type === "folders") {
+          await backupAllFolderContents(
+            hubId,
+            projectId,
+            item.id,
+            archive,
+            itemPath,
+            accessToken
+          );
+        } else if (item.type === "items") {
+          await withTimeout(
+            backupAllFileContent(
+              hubId,
+              projectId,
+              item.id,
+              archive,
+              itemPath,
+              accessToken
+            ),
+            15000
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error backing up folder contents:", error);
+    }
+  };
+  
+  service.backupData = async (req, res, accessToken) => {
+    if (!accessToken) {
+      res.status(401).json({ error: "Access token is missing." });
+      return;
+    }
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
+    res.setHeader("Content-Type", "application/zip");
+    archive.on("error", (err) => {
+      throw err;
+    });
+    // Pipe the archive data to the response
+    archive.pipe(res);
+  
+    try {
+      const hubs = await service.getHubs(accessToken);
+      for (const hub of hubs) {
+        const sanitizedHubName = sanitizeName(hub.attributes.name);
+        const projects = await service.getProjects(hub.id, accessToken);
+        if (projects.length === 0) {
+          archive.append(null, { name: `${sanitizedHubName}/` });
+          console.log(`No projects found for hub: ${sanitizedHubName}`);
+          continue;
+        } else {
+          for (const project of projects) {
+            const sanitizedProjectName = sanitizeName(project.attributes.name);
+            const projectContents = await service.getProjectContents(
+              hub.id,
+              project.id,
+              null,
+              accessToken
+            );
+            for (const content of projectContents) {
+              if (content.type === "folders") {
+                await backupAllFolderContents(
+                  hub.id,
+                  project.id,
+                  content.id,
+                  archive,
+                  `${sanitizedHubName}/${sanitizedProjectName}`,
+                  accessToken
+                );
+              } else if (content.type === "items") {
+                await backupAllFileContent(
+                  hub.id,
+                  project.id,
+                  content.id,
+                  archive,
+                  `${sanitizedHubName}/${sanitizedProjectName}`,
+                  accessToken
+                );
+              }
+            }
+          }
+        }
+      }
+      console.log("archiving");
+      archive.finalize();
+    } catch (error) {
+      console.error("Error during backup data:", error);
+    }
+  };
+  
+  service.backupSpecificData = async (
+    req,
+    stream,
+    accessToken,
+    hubId,
+    projectId
+  ) => {
+    const zip = new JSZip();
+    try {
+      const hub = (await getHubs(accessToken)).find((h) => h.id === hubId);
+      const sanitizedHubName = sanitizeName(hub.attributes.name);
+      const project = (await service.getProjects(hubId, accessToken)).find(
+        (p) => p.id === projectId
+      );
+      const sanitizedProjectName = sanitizeName(project.attributes.name);
+      const projectContents = await service.getProjectContents(
+        hubId,
+        projectId,
+        null,
+        accessToken
+      );
+      for (const content of projectContents) {
+        if (content.type === "folders") {
+          await backupFolderContents(
+            hubId,
+            projectId,
+            content.id,
+            zip,
+            sanitizedProjectName,
+            accessToken
+          );
+        } else if (content.type === "items") {
+          await withTimeout(
+            backupFileContent(
+              hubId,
+              projectId,
+              content.id,
+              zip,
+              sanitizedProjectName,
+              accessToken
+            ),
+            15000
+          );
+        }
+      }
+      // Generate the zip file and pipe to the response
+      console.log("zipBuffer");
+      const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+      stream.end(zipBuffer);
+    } catch (error) {
+      console.error("Error during backup specific data:", error);
+      stream.destroy(); // End the stream on error
+      throw new Error("Failed to backup specific data.");
+    }
+  };
+  
+  const backupFileContent = async (
+    hubId,
+    projectId,
+    itemId,
+    zip,
+    projectName,
+    accessToken
+  ) => {
+    try {
+      const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
+      // Iterate over each version and back it up
+      for (const version of itemVersions) {
+        const versionName = sanitizeName(version.attributes.displayName);
+        const url = version?.relationships?.storage?.meta?.link?.href;
+        if (!url) {
+          console.error(
+            `No download URL found for version of file ${versionName}. Skipping...`
+          );
+          continue;
+        } else {
+          const response = await withTimeout(
+            downloadFile(url, accessToken),
+            15000
+          );
+          if (!response) {
+            console.log(
+              `Failed to download file for version of ${versionName}. Skipping...`
+            );
+            continue;
+          }
+          // Add each version of the file to the zip archive with a unique name
+          zip.file(`${projectName}/${version?.attributes?.name}`, response);
+        }
+      }
+    } catch (error) {
+      console.error(`Error backing up file with ID ${itemId}:`, error);
+    }
+  };
+  
+  const backupFolderContents = async (
+    hubId,
+    projectId,
+    folderId,
+    zip,
+    basePath,
+    accessToken
+  ) => {
+    try {
+      const folderContents = await withTimeout(
+        service.getProjectContents(hubId, projectId, folderId, accessToken),
+        15000
+      );
+      for (const item of folderContents) {
+        const itemName = sanitizeName(item.attributes?.displayName);
+        const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
+        if (item.type === "folders") {
+          await backupFolderContents(
+            hubId,
+            projectId,
+            item.id,
+            zip,
+            itemPath,
+            accessToken
+          );
+        } else if (item.type === "items") {
+          await withTimeout(
+            backupFileContent(
+              hubId,
+              projectId,
+              item.id,
+              zip,
+              itemPath,
+              accessToken
+            ),
+            15000
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error backing up folder contents:", error);
+    }
+  };
 
+// async function backupFolderContents(hubId, projectId, folderId, archive, basePath, accessToken, backupData) {
+//     const folderContents = await withTimeout(service.getProjectContents(hubId, projectId, folderId, accessToken),15000);
+//     for (const item of folderContents) {
+//         const itemName = sanitizeName(item.attributes?.displayName);
+//         const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
+
+//         if (item.type === 'folders') {
+//             await backupFolderContents(hubId, projectId, item.id, archive, itemPath, accessToken, backupData);
+//         } else if (item.type === 'items') {
+//             try{
+//                 console.log(item.id);
+                
+//                 const itemVersions = await withTimeout(service.getItemVersions(projectId, item.id, accessToken),15000);
+//                 for (const version of itemVersions) {
+//                     try {
+//                         const fileStream = await withTimeout(downloadFile(version?.relationships?.storage?.meta?.link?.href, accessToken), 15000);
+//                         if(fileStream){
+//                             const isDrained = archive.append(fileStream, { name: `${itemPath}/${sanitizeName(version.attributes.displayName)}` });
+//                             console.log(isDrained);
+//                                 if (!isDrained) {
+//                                     // Handle backpressure by waiting for the 'drain' event before continuing
+//                                     await new Promise((resolve) => archive.once('drain', resolve));
+//                                     console.log("isDrained", isDrained);
+//                                 }
+//                         } else {
+//                             console.log("File stream not resolved for", version?.attributes?.displayName);
+//                             continue
+//                         }
+//                     } catch(downloadError){
+//                         console.log(downloadError);
+                        
+//                     }
+//                 }
+//             } catch(error){
+//                 console.log(error);
+                
+//             }
+//         }
+//     }
+// }
+
+// service.backupData = async (req, stream, accessToken) => {
+//     const archive = archiver('zip', { zlib: { level: 9 } });
+
+//     archive.pipe(stream);
+//     const hubs = await service.getHubs(accessToken);
+//     const backupData = {};
+
+//     for (const hub of hubs) {
+//         console.log(hub?.attributes?.name);
+//         const hubId = hub.id;
+//         const sanitizedHubName = sanitizeName(hub.attributes?.name);
+//         const projects = await service.getProjects(hubId, accessToken);
+//         console.log(projects.length);
+//         if(projects.length === 0){
+//             backupData[sanitizedHubName] = []
+//             console.log("No projects found");
+//         } else {
+//             backupData[sanitizedHubName] = projects;
+//             for (const project of projects) {
+//                 const projectId = project.id;
+//                 const sanitizedProjectName = sanitizeName(project.attributes?.name);
+//                 console.log(sanitizedProjectName);
+//                 const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
+//                 backupData[sanitizedHubName][sanitizedProjectName] = projectContents;
+    
+//                 for (const content of projectContents) {
+//                     if (content.type === 'folders') {
+//                         console.log("folder");
+//                         await backupFolderContents(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
+//                     } else if (content.type === 'items') {
+//                         console.log("item");
+//                         await backupFileContent(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken);
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     console.log('Finalizing the archive...');
+//     archive.finalize().then(() => {
+//         console.log('Archive finalized successfully.');
+//         stream.end();
+//     });
+// };
+
+// service.backupSpecificData = async (req, stream, accessToken, hubId, projectId) => {
+//     const archive = archiver('zip', { zlib: { level: 9 } });
+
+//     archive.pipe(stream);
+
+//     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
+//     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
+//     console.log(sanitizedProjectName);
+
+//     const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
+
+//     for (const content of projectContents) {
+//         if (content.type === 'folders') {
+//             console.log("folder");
+//             await backupFolderContents(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken);
+//         } else if (content.type === 'items') {
+//             console.log("item");
+//             await backupFileContent(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken);
+//         }
+//     }
+//     console.log('Finalizing the archive...');
+//     archive.finalize().then(() => {
+//         console.log('Archive finalized successfully.');
+//         stream.end();
+//     }).catch((error) => {
+//         console.error('Error finalizing archive:', error);
+//         stream.status(500).send({ error: 'Failed to finalize archive.' });
+//     });
+    
+// };
+
+// const backupFileContent = async (hubId, projectId, itemId, archive, projectName, accessToken) => {
+//     console.log("item-filetype");
+//     try {
+//         const fileContent = await service.getFileContent(hubId, projectId, itemId, accessToken);
+//         const sanitizedFileName = sanitizeName(fileContent.name);
+
+//         // Adding file to the archive with its relative path
+//         archive.append(fileContent.data, { name: `${projectName}/${sanitizedFileName}` });
+//     } catch (error) {
+//         console.error(`Error backing up file with ID ${itemId}:`, error);
+//     }
+// };
 
 service.getItemVersions = async (projectId, itemId, accessToken) => {
-    try{
-        const resp = await dataManagementClient.getItemVersions(accessToken, projectId, itemId);
+    try {
+        const resp = await withTimeout(dataManagementClient.getItemVersions(accessToken, projectId, itemId), 15000);
+        console.log(resp.data);
         return resp.data;
-    } catch (err){
-        console.log(err)
+    } catch (err) {
+        console.log(err);
     }
 };
