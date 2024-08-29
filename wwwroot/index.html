@@ -47,20 +47,32 @@
 </head>
 
 <body>
-    <div id="header">
-        <img class="logo" src="https://cdn.autodesk.io/logo/black/stacked.png" alt="Autodesk Platform Services">
-        <span class="title" style="font-weight: bold;">Hubs Browser</span>
-        <button id="backup-all" class="backup-all">BackUp All</button>
-        <select id="hub-select"></select>
-        <select id="project-select"></select>
-        <button id="backup-selected" class="backup-selected">BackUp Selected</button>
-        <button id="login" style="visibility: hidden;">Login</button>
-    </div>
     
     <div id="sidebar">
+        <div class="title" style="font-weight: bold; font-size:larger; display:flex; justify-content:center; align-items:center">Hubs Browser</div>
         <div id="tree"></div>
     </div>
     <div id="preview"></div>
+    <div id="header">
+        <div class="side-header">
+            <img class="logo" src="https://d1nw187rmwcpt3.cloudfront.net/usam_logo-removebg-preview.webp"   alt="Autodesk Platform Services">
+            <button id="login" style="visibility: hidden; cursor:pointer">Login</button>
+        </div>
+        <div class="backup" style="display:flex;flex-direction: column;">
+            <div style="width: 100%; height:100%; display:flex; flex-direction:column; align-items:center;">
+                <div style="display:flex;flex-direction: column; width:70%; height:40%; justify-content:center; gap:10px">
+                    <div style="font-size: larger;font-weight: bold; display:flex; justify-content:center;">Backup All</div>
+                    <button id="backup-all" style="cursor: pointer;" class="backup-all">Download</button>         
+                </div>
+                <div style="display:flex;flex-direction: column; width:70%; height:60%; gap:10px;">
+                    <div style="font-size: larger;font-weight: bold; display:flex; justify-content:center;">Backup Selected</div>
+                    <select id="hub-select" style="cursor: pointer;"></select>
+                    <select id="project-select" style="cursor: pointer;"></select>
+                    <button id="backup-selected" class="backup-selected" disabled>Download</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="spinner" class="overlay">
         <div class="spinner"></div>
     </div>

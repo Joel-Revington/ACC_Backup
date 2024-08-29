@@ -358,10 +358,6 @@ const backupAllFileContent = async (
       }
       console.log("archiving");
       archive.finalize();
-    //   // Generate the zip file and pipe to the response
-    //   console.log("zipBuffer");
-    //   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
-    //   stream.end(zipBuffer);
     } catch (error) {
       console.error("Error during backup specific data:", error);
       throw new Error("Failed to backup specific data.");
@@ -398,10 +394,8 @@ const backupAllFileContent = async (
             );
             continue;
           }
-          archive.append(response,{name:`${projectName}`})
+          archive.append(response,{name:`${projectName}/${version?.attributes?.name}`})
           console.log(`Added ${versionName} to archive.`);
-          // Add each version of the file to the zip archive with a unique name
-        //   zip.file(`${projectName}/${version?.attributes?.name}`, response);
         }
       }
     } catch (error) {
@@ -453,139 +447,9 @@ const backupAllFileContent = async (
     }
   };
 
-// async function backupFolderContents(hubId, projectId, folderId, archive, basePath, accessToken, backupData) {
-//     const folderContents = await withTimeout(service.getProjectContents(hubId, projectId, folderId, accessToken),15000);
-//     for (const item of folderContents) {
-//         const itemName = sanitizeName(item.attributes?.displayName);
-//         const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
-
-//         if (item.type === 'folders') {
-//             await backupFolderContents(hubId, projectId, item.id, archive, itemPath, accessToken, backupData);
-//         } else if (item.type === 'items') {
-//             try{
-//                 console.log(item.id);
-                
-//                 const itemVersions = await withTimeout(service.getItemVersions(projectId, item.id, accessToken),15000);
-//                 for (const version of itemVersions) {
-//                     try {
-//                         const fileStream = await withTimeout(downloadFile(version?.relationships?.storage?.meta?.link?.href, accessToken), 15000);
-//                         if(fileStream){
-//                             const isDrained = archive.append(fileStream, { name: `${itemPath}/${sanitizeName(version.attributes.displayName)}` });
-//                             console.log(isDrained);
-//                                 if (!isDrained) {
-//                                     // Handle backpressure by waiting for the 'drain' event before continuing
-//                                     await new Promise((resolve) => archive.once('drain', resolve));
-//                                     console.log("isDrained", isDrained);
-//                                 }
-//                         } else {
-//                             console.log("File stream not resolved for", version?.attributes?.displayName);
-//                             continue
-//                         }
-//                     } catch(downloadError){
-//                         console.log(downloadError);
-                        
-//                     }
-//                 }
-//             } catch(error){
-//                 console.log(error);
-                
-//             }
-//         }
-//     }
-// }
-
-// service.backupData = async (req, stream, accessToken) => {
-//     const archive = archiver('zip', { zlib: { level: 9 } });
-
-//     archive.pipe(stream);
-//     const hubs = await service.getHubs(accessToken);
-//     const backupData = {};
-
-//     for (const hub of hubs) {
-//         console.log(hub?.attributes?.name);
-//         const hubId = hub.id;
-//         const sanitizedHubName = sanitizeName(hub.attributes?.name);
-//         const projects = await service.getProjects(hubId, accessToken);
-//         console.log(projects.length);
-//         if(projects.length === 0){
-//             backupData[sanitizedHubName] = []
-//             console.log("No projects found");
-//         } else {
-//             backupData[sanitizedHubName] = projects;
-//             for (const project of projects) {
-//                 const projectId = project.id;
-//                 const sanitizedProjectName = sanitizeName(project.attributes?.name);
-//                 console.log(sanitizedProjectName);
-//                 const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
-//                 backupData[sanitizedHubName][sanitizedProjectName] = projectContents;
-    
-//                 for (const content of projectContents) {
-//                     if (content.type === 'folders') {
-//                         console.log("folder");
-//                         await backupFolderContents(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken, backupData[sanitizedHubName][sanitizedProjectName]);
-//                     } else if (content.type === 'items') {
-//                         console.log("item");
-//                         await backupFileContent(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken);
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     console.log('Finalizing the archive...');
-//     archive.finalize().then(() => {
-//         console.log('Archive finalized successfully.');
-//         stream.end();
-//     });
-// };
-
-// service.backupSpecificData = async (req, stream, accessToken, hubId, projectId) => {
-//     const archive = archiver('zip', { zlib: { level: 9 } });
-
-//     archive.pipe(stream);
-
-//     const sanitizedHubName = sanitizeName((await service.getHubs(accessToken)).find(h => h.id === hubId).attributes.name);
-//     const sanitizedProjectName = sanitizeName((await service.getProjects(hubId, accessToken)).find(p => p.id === projectId).attributes.name);
-//     console.log(sanitizedProjectName);
-
-//     const projectContents = await service.getProjectContents(hubId, projectId, null, accessToken);
-
-//     for (const content of projectContents) {
-//         if (content.type === 'folders') {
-//             console.log("folder");
-//             await backupFolderContents(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken);
-//         } else if (content.type === 'items') {
-//             console.log("item");
-//             await backupFileContent(hubId, projectId, content.id, archive, sanitizedProjectName, accessToken);
-//         }
-//     }
-//     console.log('Finalizing the archive...');
-//     archive.finalize().then(() => {
-//         console.log('Archive finalized successfully.');
-//         stream.end();
-//     }).catch((error) => {
-//         console.error('Error finalizing archive:', error);
-//         stream.status(500).send({ error: 'Failed to finalize archive.' });
-//     });
-    
-// };
-
-// const backupFileContent = async (hubId, projectId, itemId, archive, projectName, accessToken) => {
-//     console.log("item-filetype");
-//     try {
-//         const fileContent = await service.getFileContent(hubId, projectId, itemId, accessToken);
-//         const sanitizedFileName = sanitizeName(fileContent.name);
-
-//         // Adding file to the archive with its relative path
-//         archive.append(fileContent.data, { name: `${projectName}/${sanitizedFileName}` });
-//     } catch (error) {
-//         console.error(`Error backing up file with ID ${itemId}:`, error);
-//     }
-// };
-
 service.getItemVersions = async (projectId, itemId, accessToken) => {
     try {
         const resp = await withTimeout(dataManagementClient.getItemVersions(accessToken, projectId, itemId), 15000);
-        console.log(resp.data);
         return resp.data;
     } catch (err) {
         console.log(err);
