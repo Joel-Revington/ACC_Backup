@@ -118,14 +118,14 @@ async function handleBackupAll() {
             }
         });
         if (response.ok) {
-            const blob = await response.blob(); 
+            const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'backup.zip'; 
+            link.download = 'backup.zip';
             document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link); 
+            document.body.removeChild(link);
         } else {
             const errorText = await response.text();
             console.error('Backup failed:', errorText);
@@ -154,12 +154,12 @@ async function handleBackupSelected() {
                 }
             });
             if (response.ok) {
-                const blob = await response.blob(); 
-                const url = window.URL.createObjectURL(blob); 
-                const link = document.createElement('a'); 
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
                 link.href = url;
-                link.download = 'backup.zip'; 
-                document.body.appendChild(link); 
+                link.download = 'backup.zip';
+                document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             } else {

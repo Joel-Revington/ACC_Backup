@@ -7,12 +7,14 @@
     <link rel="icon" type="image/x-icon" href="https://cdn.autodesk.io/favicon.ico">
     <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.css">
     <link rel="stylesheet" href="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-light.min.css">
+    <link href="./output.css" rel="stylesheet">
     <link rel="stylesheet" href="/main.css">
     <title>Autodesk Platform Services: Hubs Browser</title>
     <style>
         /* Spinner styles */
         #spinner {
-            display: none; /* Hidden by default */
+            display: none;
+            /* Hidden by default */
             position: fixed;
             z-index: 1000;
             top: 50%;
@@ -27,13 +29,19 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Overlay styles */
         .overlay {
-            display: none; /* Hidden by default */
+            display: none;
+            /* Hidden by default */
             position: fixed;
             z-index: 999;
             left: 0;
@@ -43,32 +51,194 @@
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.5);
         }
+
+        .hidden {
+            display: none;
+        }
+
+        .modal {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            z-index: 9999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 2rem;
+            /* border-radius: 8px; */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        .modal-content h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-content input[type="text"],
+        .modal-content input[type="password"] {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .modal-content form{
+            width: 25%;
+        }
+
+        .modal-content button {
+            padding: 0.75rem 1.5rem;
+            margin-top: 1rem;
+            /* background-color: #007bff; */
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 90%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-content h2 {
+                font-size: 1.5rem;
+            }
+
+            .modal-content input[type="text"],
+            .modal-content input[type="password"] {
+                padding: 0.5rem;
+                font-size: 0.875rem;
+            }
+
+            .modal-content button {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Spinner styles */
+        #spinner {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            top: 50%;
+            left: 50%;
+            margin: -50px 0 0 -50px;
+            width: 50px;
+            height: 50px;
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #000000;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
-<body>
-    
-    <div id="sidebar">
-        <div class="title" style="font-weight: bold; font-size:larger; display:flex; justify-content:center; align-items:center">Hubs Browser</div>
-        <div id="tree"></div>
-    </div>
-    <div id="preview"></div>
-    <div id="header">
-        <div class="side-header">
-            <img class="logo" src="https://d1nw187rmwcpt3.cloudfront.net/usam_logo-removebg-preview.webp"   alt="Autodesk Platform Services">
-            <button id="login" style="visibility: hidden; cursor:pointer">Login</button>
-        </div>
-        <div class="backup" style="display:flex;flex-direction: column;">
-            <div style="width: 100%; height:100%; display:flex; flex-direction:column; align-items:center;">
-                <div style="display:flex;flex-direction: column; width:70%; height:40%; justify-content:center; gap:10px">
-                    <div style="font-size: larger;font-weight: bold; display:flex; justify-content:center;">Backup All</div>
-                    <button id="backup-all" style="cursor: pointer;" class="backup-all">Download</button>         
+<body class="h-full w-full flex">
+    <!-- Login Form -->
+    <div id="login-container" class="modal flex items-center justify-center flex-1">
+        <div class="modal-content bg-white p-8 shadow-lg h-full flex flex-col w-[50%] justify-center items-center">
+            <h2 class="text-2xl font-semibold text-center mb-6">Login to Your Account</h2>
+            <form id="login-form" class="max-w-xl" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input type="email" id="email" name="email" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-neutral-500 transition"
+                        placeholder="you@example.com" />
                 </div>
-                <div style="display:flex;flex-direction: column; width:70%; height:60%; gap:10px;">
-                    <div style="font-size: larger;font-weight: bold; display:flex; justify-content:center;">Backup Selected</div>
-                    <select id="hub-select" style="cursor: pointer;"></select>
-                    <select id="project-select" style="cursor: pointer;"></select>
-                    <button id="backup-selected" class="backup-selected" disabled>Download</button>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" name="password" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-neutral-500 transition"
+                        placeholder="********" />
+                </div>
+                <button type="submit"
+                    class="w-full bg-neutral-800 text-white rounded-md py-2 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition">
+                    Login
+                </button>
+            </form>
+            <p class="mt-4 text-sm text-center text-gray-600">
+                Don't have an account? <a href="#" class="text-neutral-800 hover:underline">Sign up</a>
+            </p>
+        </div>
+    </div>
+    <div id="sidebar" class=" w-[20%] bg-neutral-800 text-white">
+        <div class="title font-semibold text-xl flex justify-center items-center py-3 bg-neutral-700">Hubs Browser</div>
+        <div id="tree" class="pt-2"></div>
+    </div>
+    <div id="preview" class=" w-[55%] flex-1 relative"></div>
+    <div id="header" class=" flex-col w-[20%]">
+        <div class="side-header w-full flex flex-col justify-center items-center p-6">
+            <img class="logo w-[80%] max-w-xs"
+                src="https://d1nw187rmwcpt3.cloudfront.net/usam_logo-removebg-preview.webp"
+                alt="Autodesk Platform Services" />
+            <button id="login" style="visibility: hidden;"
+                class="bg-neutral-700 text-white rounded-md w-max mx-auto mt-4 py-1 px-4 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition">
+                Login
+            </button>
+        </div>
+        <div class="backup p-4 md:p-6 bg-gray-100 rounded-lg shadow-md">
+            <div class="flex flex-col space-y-6">
+                <!-- Backup All Section -->
+                <div class="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
+                    <div class="flex flex-col items-start mb-4">
+                        <div class="text-lg font-semibold mb-2">Backup All</div>
+                        <p class="text-gray-600 text-sm">Download a backup of all your data in one go.</p>
+                    </div>
+                    <button id="backup-all" style="cursor: pointer;"
+                        class="w-full px-4 py-1 bg-neutral-700 text-white rounded-lg hover:bg-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition-colors duration-200">
+                        <span class="font-medium">Download</span>
+                    </button>
+                </div>
+
+                <!-- Backup Selected Section -->
+                <div class="bg-white p-6 rounded-lg shadow-lg mx-auto mb-6">
+                    <div class="flex flex-col items-start mb-1">
+                        <div class="text-lg font-semibold mb-2">Backup Selected</div>
+                        <p class="text-gray-600 text-sm mb-4">Choose a hub and project to create a backup.</p>
+                    </div>
+                    <div class="flex flex-col space-y-3">
+                        <select id="hub-select" style="cursor: pointer;"
+                            class="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-neutral-500 transition">
+                            <option value="">Select Hub</option>
+                            <!-- Options will be populated here -->
+                        </select>
+                        <select id="project-select" style="cursor: pointer;"
+                            class="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-neutral-500 transition">
+                            <option value="">Select Project</option>
+                            <!-- Options will be populated here -->
+                        </select>
+                    </div>
+                    <button id="backup-selected"
+                        class="w-full px-4 py-1 mt-4 bg-neutral-700 text-white rounded-lg hover:bg-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition"
+                        disabled>Download</button>
                 </div>
             </div>
         </div>
@@ -82,20 +252,51 @@
     <script src="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-dom.min.js"></script>
     <script src="/main.js" type="module"></script>
     <script>
-        function toggleDropdown() {
-            document.getElementById("projectsDropdown").classList.toggle("show");
-        }
-        window.onclick = function(event) {
-            if (!event.target.matches('#projectsDropdown button')) {
-                const dropdowns = document.getElementsByClassName("dropdown-content");
-                for (let i = 0; i < dropdowns.length; i++) {
-                    const openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
+        async function handleLogin(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Show spinner while processing
+            document.getElementById('spinner').style.display = 'block';
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('login-modal').style.display = 'none';
+
+                    } else {
+                        alert('Please enter valid credentials.');
                     }
+                } else {
+                    showError('Invalid response from server.');
                 }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('An error occurred during login. Please try again.');
+            } finally {
+                document.getElementById('spinner').style.display = 'none'; // Hide spinner
             }
         }
+        
+
+        function showError(message) {
+            const errorElement = document.getElementById('login-error');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+
     </script>
 </body>
 
