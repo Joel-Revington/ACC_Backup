@@ -187,6 +187,9 @@ try {
     if (resp.ok) {
         const user = await resp.json();
         login.innerText = `Logout (${user.name})`;
+        document.getElementById('login-modal').style.display = 'none';
+        document.getElementById('header').style.width = '25%'
+        document.getElementById('backup').style.width = '75%'
         login.onclick = () => {
             const iframe = document.createElement('iframe');
             iframe.style.visibility = 'hidden';
