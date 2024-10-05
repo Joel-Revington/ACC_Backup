@@ -1,14 +1,7 @@
-// db.js
-const sql = require('mssql');
-const config = require('./config');
+const {createClient} = require('@supabase/supabase-js')
+const supabaseUrl = process.env.SUPABASE_URL; // Replace with your Supabase URL
+const supabaseKey = process.env.SUPABASE_KEY; // Replace with your Supabase API key
+const supabase = createClient(supabaseUrl, supabaseKey);
+console.log('db connected');
 
-async function connectToDatabase() {
-    try {
-        await sql.connect(config);
-        console.log('Connected to SQL Server successfully!');
-    } catch (err) {
-        console.error('Database connection failed:', err);
-    }
-}
-
-module.exports = { connectToDatabase, sql };
+module.exports = supabase
