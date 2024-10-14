@@ -206,7 +206,7 @@ const backupAllFileContent = async (
       const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
       // Iterate over each version and back it up
       for (const version of itemVersions) {
-        const versionName = sanitizeName(version.attributes.displayName);
+        const versionName = sanitizeName(version.attributes.name);
         const url = version?.relationships?.storage?.meta?.link?.href;
         if (url === undefined) {
           console.error(
@@ -225,7 +225,7 @@ const backupAllFileContent = async (
             continue;
           }
           // Add each version of the file to the zip archive with a unique name
-          archive.append(response, { name: `${projectName}` });
+          archive.append(response, { name: `${projectName}/${versionName}` });
           console.log(`Added ${versionName} to archive.`);
           // zip.file(`${projectName}/${version?.attributes?.name}`, response);
         }
@@ -335,77 +335,77 @@ const backupAllFileContent = async (
           }
         }
       }
-      console.log("archiving");
-      archive.finalize();
+      await archive.finalize();
+      console.log("Backup completed and archive finalized.");
     } catch (error) {
       console.error("Error during backup data:", error);
     }
   };
   
-  service.backupSpecificData = async (
-    req,
-    res,
-    accessToken,
-    hubId,
-    projectId
-  ) => {
-    // const zip = new JSZip();
-    if (!accessToken) {
-        res.status(401).json({ error: "Access token is missing." });
-        return;
-      }
-      const archive = archiver("zip", { zlib: { level: 9 } });
-      res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
-      res.setHeader("Content-Type", "application/zip");
-      archive.on("error", (err) => {
-        throw err;
-      });
-      // Pipe the archive data to the response
-      archive.pipe(res);
-    try {
-      const hub = (await service.getHubs(accessToken)).find((h) => h.id === hubId);
-      const sanitizedHubName = sanitizeName(hub.attributes.name);
-      const project = (await service.getProjects(hubId, accessToken)).find(
-        (p) => p.id === projectId
-      );
-      const sanitizedProjectName = sanitizeName(project.attributes.name);
-      const projectContents = await service.getProjectContents(
-        hubId,
-        projectId,
-        null,
-        accessToken
-      );
-      for (const content of projectContents) {
-        if (content.type === "folders") {
-          await backupFolderContents(
-            hubId,
-            projectId,
-            content.id,
-            archive,
-            sanitizedProjectName,
-            accessToken
-          );
-        } else if (content.type === "items") {
-          await withTimeout(
-            backupFileContent(
-              hubId,
-              projectId,
-              content.id,
-              archive,
-              sanitizedProjectName,
-              accessToken
-            ),
-            15000
-          );
-        }
-      }
-      console.log("archiving");
-      archive.finalize();
-    } catch (error) {
-      console.error("Error during backup specific data:", error);
-      throw new Error("Failed to backup specific data.");
-    }
-  };
+  // service.backupSpecificData = async (
+  //   req,
+  //   res,
+  //   accessToken,
+  //   hubId,
+  //   projectId
+  // ) => {
+  //   // const zip = new JSZip();
+  //   if (!accessToken) {
+  //       res.status(401).json({ error: "Access token is missing." });
+  //       return;
+  //     }
+  //     const archive = archiver("zip", { zlib: { level: 9 } });
+  //     res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
+  //     res.setHeader("Content-Type", "application/zip");
+  //     archive.on("error", (err) => {
+  //       throw err;
+  //     });
+  //     // Pipe the archive data to the response
+  //     archive.pipe(res);
+  //   try {
+  //     const hub = (await service.getHubs(accessToken)).find((h) => h.id === hubId);
+  //     const sanitizedHubName = sanitizeName(hub.attributes.name);
+  //     const project = (await service.getProjects(hubId, accessToken)).find(
+  //       (p) => p.id === projectId
+  //     );
+  //     const sanitizedProjectName = sanitizeName(project.attributes.name);
+  //     const projectContents = await service.getProjectContents(
+  //       hubId,
+  //       projectId,
+  //       null,
+  //       accessToken
+  //     );
+  //     for (const content of projectContents) {
+  //       if (content.type === "folders") {
+  //         await backupFolderContents(
+  //           hubId,
+  //           projectId,
+  //           content.id,
+  //           archive,
+  //           sanitizedProjectName,
+  //           accessToken
+  //         );
+  //       } else if (content.type === "items") {
+  //         await withTimeout(
+  //           backupFileContent(
+  //             hubId,
+  //             projectId,
+  //             content.id,
+  //             archive,
+  //             sanitizedProjectName,
+  //             accessToken
+  //           ),
+  //           15000
+  //         );
+  //       }
+  //     }
+  //     console.log("archiving");
+  //     archive.finalize();
+  //   } catch (error) {
+  //     console.error("Error during backup specific data:", error);
+  //     throw new Error("Failed to backup specific data.");
+  //   }
+  // };
   
   const backupFileContent = async (
     hubId,
@@ -419,7 +419,7 @@ const backupAllFileContent = async (
       const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
       // Iterate over each version and back it up
       for (const version of itemVersions) {
-        const versionName = sanitizeName(version.attributes.displayName);
+        const versionName = sanitizeName(version.attributes.name);
         const url = version?.relationships?.storage?.meta?.link?.href;
         if (!url) {
           console.error(
@@ -437,7 +437,7 @@ const backupAllFileContent = async (
             );
             continue;
           }
-          archive.append(response,{name:`${projectName}/${version?.attributes?.name}`})
+          archive.append(response,{name:`${projectName}/${versionName}`})
           console.log(`Added ${versionName} to archive.`);
         }
       }
