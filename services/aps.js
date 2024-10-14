@@ -180,18 +180,6 @@ const downloadFile = async (url, accessToken) => {
   return response.data;
 };
 
-service.getItemVersions = async (projectId, itemId, accessToken) => {
-  try {
-    const resp = await withTimeout(
-      dataManagementClient.getItemVersions(accessToken, projectId, itemId),
-      15000
-    );
-    return resp.data;
-  } catch (err) {
-    console.log(err);
-  }
-};
-
 const backupAllFileContent = async (
   hubId,
   projectId,
@@ -201,6 +189,7 @@ const backupAllFileContent = async (
   accessToken
 ) => {
   try {
+    console.log("path", projectName);
 
     const itemVersions = await service.getItemVersions(
       projectId,
@@ -209,7 +198,7 @@ const backupAllFileContent = async (
     );
     // Iterate over each version and back it up
     for (const [index, version] of itemVersions.entries()) {
-      const versionName = sanitizeName(version.attributes.name);
+      const versionName = sanitizeName(version.attributes.displayName);
       const url = version?.relationships?.storage?.meta?.link?.href;
       if (url === undefined) {
         console.error(
@@ -228,8 +217,8 @@ const backupAllFileContent = async (
           continue;
         }
         // Add each version of the file to the zip archive with a unique name
-        archive.append(response, { name: `${projectName}/${versionName}` });
-        // console.log(`Added ${versionName} to archive.`);
+        archive.append(response, { name: `${projectName}/${versionName}${index + 1}` });
+        console.log(`Added ${versionName} to archive.`);
         // zip.file(`${projectName}/${version?.attributes?.name}`, response);
       }
     }
@@ -254,6 +243,8 @@ const backupAllFolderContents = async (
     for (const item of folderContents) {
       const itemName = sanitizeName(item.attributes?.displayName);
       const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
+      console.log("base", basePath);
+      console.log("item", itemPath);
 
       if (item.type === "folders") {
         await backupAllFolderContents(
@@ -304,7 +295,7 @@ service.backupData = async (req, res, accessToken) => {
       const projects = await service.getProjects(hub.id, accessToken);
       if (projects.length === 0) {
         archive.append(null, { name: `${sanitizedHubName}/` });
-        // console.log(`No projects found for hub: ${sanitizedHubName}`);
+        console.log(`No projects found for hub: ${sanitizedHubName}`);
         continue;
       } else {
         for (const project of projects) {
@@ -362,7 +353,7 @@ const backupFileContent = async (
     );
     // Iterate over each version and back it up
     for (const [index, version] of itemVersions.entries()) {
-      const versionName = sanitizeName(version.attributes.name);
+      const versionName = sanitizeName(version.attributes.displayName);
       const url = version?.relationships?.storage?.meta?.link?.href;
 
       if (!url) {
@@ -381,8 +372,8 @@ const backupFileContent = async (
       }
 
       // Append the file content to the archive directly (as a stream)
-      archive.append(response, { name: `${projectName}/${versionName}` });
-      // console.log(`Added ${versionName} to archive.`);
+      archive.append(response, { name: `${projectName}/${versionName}_${index + 1}` });
+      console.log(`Added ${versionName} to archive.`);
     }
   } catch (error) {
     console.error(`Error backing up file with ID ${itemId}:`, error);
@@ -503,5 +494,17 @@ service.backupSpecificData = async (
   } catch (error) {
     console.error("Error during backup:", error);
     res.status(500).json({ error: "Failed to backup specific data." });
+  }
+};
+
+service.getItemVersions = async (projectId, itemId, accessToken) => {
+  try {
+    const resp = await withTimeout(
+      dataManagementClient.getItemVersions(accessToken, projectId, itemId),
+      15000
+    );
+    return resp.data;
+  } catch (err) {
+    console.log(err);
   }
 };
