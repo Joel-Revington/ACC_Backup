@@ -198,7 +198,7 @@ const backupAllFileContent = async (
     );
     // Iterate over each version and back it up
     for (const [index, version] of itemVersions.entries()) {
-      const versionName = sanitizeName(version.attributes.displayName);
+      const versionName = sanitizeName(version.attributes.name);
       const url = version?.relationships?.storage?.meta?.link?.href;
       if (url === undefined) {
         console.error(
@@ -217,7 +217,7 @@ const backupAllFileContent = async (
           continue;
         }
         // Add each version of the file to the zip archive with a unique name
-        archive.append(response, { name: `${projectName}/${versionName}${index + 1}` });
+        archive.append(response, { name: `${projectName}/${versionName}` });
         console.log(`Added ${versionName} to archive.`);
         // zip.file(`${projectName}/${version?.attributes?.name}`, response);
       }
@@ -353,7 +353,7 @@ const backupFileContent = async (
     );
     // Iterate over each version and back it up
     for (const [index, version] of itemVersions.entries()) {
-      const versionName = sanitizeName(version.attributes.displayName);
+      const versionName = sanitizeName(version.attributes.name);
       const url = version?.relationships?.storage?.meta?.link?.href;
 
       if (!url) {
@@ -372,7 +372,7 @@ const backupFileContent = async (
       }
 
       // Append the file content to the archive directly (as a stream)
-      archive.append(response, { name: `${projectName}/${versionName}_${index + 1}` });
+      archive.append(response, { name: `${projectName}/${versionName}` });
       console.log(`Added ${versionName} to archive.`);
     }
   } catch (error) {
