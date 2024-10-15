@@ -169,326 +169,262 @@ const withTimeout = (promise, timeoutMs) => {
   });
 };
 
+const downloadFile = async (url, accessToken) => {
+  const response = await axios.get(url, {
+    responseType: "stream",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 
-async function downloadFile(url, accessToken) {
-    console.log(url);
-    if (url !== undefined) {
-        try{
-            const response = await axios({
-                method: 'GET',
-                url: url,
-                responseType: 'stream',
-                headers: {
-                    Authorization: `Bearer ${accessToken}`
-                }
-            });
-    
-            return response.data;
-        } catch(err) {
-            console.log(err);
-            return null;
-        }
-    } else {
-        console.log("Unsupported Version");
-        return null
-    }
-}
+  return response.data;
+};
 
 const backupAllFileContent = async (
-    hubId,
-    projectId,
-    itemId,
-    archive,
-    projectName,
-    accessToken
-  ) => {
-    try {
-      const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
-      // Iterate over each version and back it up
-      for (const version of itemVersions) {
-        const versionName = sanitizeName(version.attributes.name);
-        const url = version?.relationships?.storage?.meta?.link?.href;
-        if (url === undefined) {
-          console.error(
-            `No download URL found for version of file ${versionName}. Skipping...`
+  hubId,
+  projectId,
+  itemId,
+  archive,
+  projectName,
+  accessToken
+) => {
+  try {
+    console.log("path", projectName);
+
+    const itemVersions = await service.getItemVersions(
+      projectId,
+      itemId,
+      accessToken
+    );
+    // Iterate over each version and back it up
+    for (const [index, version] of itemVersions.entries()) {
+      const versionName = sanitizeName(version.attributes.name);
+      const url = version?.relationships?.storage?.meta?.link?.href;
+      if (url === undefined) {
+        console.error(
+          `No download URL found for version of file ${versionName}. Skipping...`
+        );
+        continue;
+      } else {
+        const response = await withTimeout(
+          downloadFile(url, accessToken),
+          15000
+        );
+        if (!response) {
+          console.log(
+            `Failed to download file for version of ${versionName}. Skipping...`
           );
           continue;
-        } else {
-          const response = await withTimeout(
-            downloadFile(url, accessToken),
-            15000
-          );
-          if (!response) {
-            console.log(
-              `Failed to download file for version of ${versionName}. Skipping...`
-            );
-            continue;
-          }
-          // Add each version of the file to the zip archive with a unique name
-          archive.append(response, { name: `${projectName}/${versionName}` });
-          console.log(`Added ${versionName} to archive.`);
-          // zip.file(`${projectName}/${version?.attributes?.name}`, response);
         }
+        // Add each version of the file to the zip archive with a unique name
+        archive.append(response, { name: `${projectName}/${versionName}` });
+        console.log(`Added ${versionName} to archive.`);
+        // zip.file(`${projectName}/${version?.attributes?.name}`, response);
       }
-    } catch (error) {
-      console.error(`Error backing up file with ID ${itemId}:`, error);
     }
-  };
-  
-  const backupAllFolderContents = async (
-    hubId,
-    projectId,
-    folderId,
-    archive,
-    basePath,
-    accessToken
-  ) => {
-    try {
-      const folderContents = await withTimeout(
-        service.getProjectContents(hubId, projectId, folderId, accessToken),
-        15000
-      );
-      for (const item of folderContents) {
-        const itemName = sanitizeName(item.attributes?.displayName);
-        const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
-        if (item.type === "folders") {
-          await backupAllFolderContents(
+  } catch (error) {
+    console.error(`Error backing up file with ID ${itemId}:`, error);
+  }
+};
+
+const backupAllFolderContents = async (
+  hubId,
+  projectId,
+  folderId,
+  archive,
+  basePath,
+  accessToken
+) => {
+  try {
+    const folderContents = await withTimeout(
+      service.getProjectContents(hubId, projectId, folderId, accessToken),
+      15000
+    );
+    for (const item of folderContents) {
+      const itemName = sanitizeName(item.attributes?.displayName);
+      const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
+      console.log("base", basePath);
+      console.log("item", itemPath);
+
+      if (item.type === "folders") {
+        await backupAllFolderContents(
+          hubId,
+          projectId,
+          item.id,
+          archive,
+          itemPath,
+          accessToken
+        );
+      } else if (item.type === "items") {
+        await withTimeout(
+          backupAllFileContent(
             hubId,
             projectId,
             item.id,
             archive,
             itemPath,
             accessToken
-          );
-        } else if (item.type === "items") {
-          await withTimeout(
-            backupAllFileContent(
-              hubId,
-              projectId,
-              item.id,
-              archive,
-              itemPath,
-              accessToken
-            ),
-            15000
-          );
-        }
+          ),
+          15000
+        );
       }
-    } catch (error) {
-      console.error("Error backing up folder contents:", error);
     }
-  };
-  
-  service.backupData = async (req, res, accessToken) => {
-    if (!accessToken) {
-      res.status(401).json({ error: "Access token is missing." });
-      return;
-    }
-    const archive = archiver("zip", { zlib: { level: 9 } });
-    res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
-    res.setHeader("Content-Type", "application/zip");
-    archive.on("error", (err) => {
-      throw err;
-    });
-    // Pipe the archive data to the response
-    archive.pipe(res);
-  
-    try {
-      const hubs = await service.getHubs(accessToken);
-      for (const hub of hubs) {
-        const sanitizedHubName = sanitizeName(hub.attributes.name);
-        const projects = await service.getProjects(hub.id, accessToken);
-        if (projects.length === 0) {
-          archive.append(null, { name: `${sanitizedHubName}/` });
-          console.log(`No projects found for hub: ${sanitizedHubName}`);
-          continue;
-        } else {
-          for (const project of projects) {
-            const sanitizedProjectName = sanitizeName(project.attributes.name);
-            const projectContents = await service.getProjectContents(
-              hub.id,
-              project.id,
-              null,
-              accessToken
-            );
-            for (const content of projectContents) {
-              if (content.type === "folders") {
-                await backupAllFolderContents(
-                  hub.id,
-                  project.id,
-                  content.id,
-                  archive,
-                  `${sanitizedHubName}/${sanitizedProjectName}`,
-                  accessToken
-                );
-              } else if (content.type === "items") {
-                await backupAllFileContent(
-                  hub.id,
-                  project.id,
-                  content.id,
-                  archive,
-                  `${sanitizedHubName}/${sanitizedProjectName}`,
-                  accessToken
-                );
-              }
+  } catch (error) {
+    console.error("Error backing up folder contents:", error);
+  }
+};
+
+service.backupData = async (req, res, accessToken) => {
+  if (!accessToken) {
+    res.status(401).json({ error: "Access token is missing." });
+    return;
+  }
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
+  res.setHeader("Content-Type", "application/zip");
+  archive.on("error", (err) => {
+    throw err;
+  });
+  // Pipe the archive data to the response
+  archive.pipe(res);
+
+  try {
+    const hubs = await service.getHubs(accessToken);
+    for (const hub of hubs) {
+      const sanitizedHubName = sanitizeName(hub.attributes.name);
+      const projects = await service.getProjects(hub.id, accessToken);
+      if (projects.length === 0) {
+        archive.append(null, { name: `${sanitizedHubName}/` });
+        console.log(`No projects found for hub: ${sanitizedHubName}`);
+        continue;
+      } else {
+        for (const project of projects) {
+          const sanitizedProjectName = sanitizeName(project.attributes.name);
+          const projectContents = await service.getProjectContents(
+            hub.id,
+            project.id,
+            null,
+            accessToken
+          );
+          for (const content of projectContents) {
+            if (content.type === "folders") {
+              await backupAllFolderContents(
+                hub.id,
+                project.id,
+                content.id,
+                archive,
+                `${sanitizedHubName}/${sanitizedProjectName}`,
+                accessToken
+              );
+            } else if (content.type === "items") {
+              await backupAllFileContent(
+                hub.id,
+                project.id,
+                content.id,
+                archive,
+                `${sanitizedHubName}/${sanitizedProjectName}`,
+                accessToken
+              );
             }
           }
         }
       }
-      await archive.finalize();
-      console.log("Backup completed and archive finalized.");
-    } catch (error) {
-      console.error("Error during backup data:", error);
     }
-  };
-  
-  // service.backupSpecificData = async (
-  //   req,
-  //   res,
-  //   accessToken,
-  //   hubId,
-  //   projectId
-  // ) => {
-  //   // const zip = new JSZip();
-  //   if (!accessToken) {
-  //       res.status(401).json({ error: "Access token is missing." });
-  //       return;
-  //     }
-  //     const archive = archiver("zip", { zlib: { level: 9 } });
-  //     res.setHeader("Content-Disposition", "attachment; filename=backup.zip");
-  //     res.setHeader("Content-Type", "application/zip");
-  //     archive.on("error", (err) => {
-  //       throw err;
-  //     });
-  //     // Pipe the archive data to the response
-  //     archive.pipe(res);
-  //   try {
-  //     const hub = (await service.getHubs(accessToken)).find((h) => h.id === hubId);
-  //     const sanitizedHubName = sanitizeName(hub.attributes.name);
-  //     const project = (await service.getProjects(hubId, accessToken)).find(
-  //       (p) => p.id === projectId
-  //     );
-  //     const sanitizedProjectName = sanitizeName(project.attributes.name);
-  //     const projectContents = await service.getProjectContents(
-  //       hubId,
-  //       projectId,
-  //       null,
-  //       accessToken
-  //     );
-  //     for (const content of projectContents) {
-  //       if (content.type === "folders") {
-  //         await backupFolderContents(
-  //           hubId,
-  //           projectId,
-  //           content.id,
-  //           archive,
-  //           sanitizedProjectName,
-  //           accessToken
-  //         );
-  //       } else if (content.type === "items") {
-  //         await withTimeout(
-  //           backupFileContent(
-  //             hubId,
-  //             projectId,
-  //             content.id,
-  //             archive,
-  //             sanitizedProjectName,
-  //             accessToken
-  //           ),
-  //           15000
-  //         );
-  //       }
-  //     }
-  //     console.log("archiving");
-  //     archive.finalize();
-  //   } catch (error) {
-  //     console.error("Error during backup specific data:", error);
-  //     throw new Error("Failed to backup specific data.");
-  //   }
-  // };
-  
-  const backupFileContent = async (
-    hubId,
-    projectId,
-    itemId,
-    archive,
-    projectName,
-    accessToken
-  ) => {
-    try {
-      const itemVersions = await service.getItemVersions(projectId, itemId, accessToken);
-      // Iterate over each version and back it up
-      for (const version of itemVersions) {
-        const versionName = sanitizeName(version.attributes.name);
-        const url = version?.relationships?.storage?.meta?.link?.href;
-        if (!url) {
-          console.error(
-            `No download URL found for version of file ${versionName}. Skipping...`
-          );
-          continue;
-        } else {
-          const response = await withTimeout(
-            downloadFile(url, accessToken),
-            15000
-          );
-          if (!response) {
-            console.log(
-              `Failed to download file for version of ${versionName}. Skipping...`
-            );
-            continue;
-          }
-          archive.append(response,{name:`${projectName}/${versionName}`})
-          console.log(`Added ${versionName} to archive.`);
-        }
+    console.log("archiving");
+    archive.finalize();
+  } catch (error) {
+    console.error("Error during backup data:", error);
+  }
+};
+
+const backupFileContent = async (
+  hubId,
+  projectId,
+  itemId,
+  archive,
+  projectName,
+  accessToken
+) => {
+  try {
+    const itemVersions = await service.getItemVersions(
+      projectId,
+      itemId,
+      accessToken
+    );
+    // Iterate over each version and back it up
+    for (const [index, version] of itemVersions.entries()) {
+      const versionName = sanitizeName(version.attributes.name);
+      const url = version?.relationships?.storage?.meta?.link?.href;
+
+      if (!url) {
+        console.error(
+          `No download URL found for file ${versionName}. Skipping...`
+        );
+        continue;
       }
-    } catch (error) {
-      console.error(`Error backing up file with ID ${itemId}:`, error);
+
+      // Download the file using the URL and the access token
+      const response = await withTimeout(downloadFile(url, accessToken), 15000);
+
+      if (!response) {
+        console.log(`Failed to download file: ${versionName}. Skipping...`);
+        continue;
+      }
+
+      // Append the file content to the archive directly (as a stream)
+      archive.append(response, { name: `${projectName}/${versionName}` });
+      console.log(`Added ${versionName} to archive.`);
     }
-  };
-  
-  const backupFolderContents = async (
-    hubId,
-    projectId,
-    folderId,
-    archive,
-    basePath,
-    accessToken
-  ) => {
-    try {
-      const folderContents = await withTimeout(
-        service.getProjectContents(hubId, projectId, folderId, accessToken),
-        15000
-      );
-      for (const item of folderContents) {
-        const itemName = sanitizeName(item.attributes?.displayName);
-        const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
-        if (item.type === "folders") {
-          await backupFolderContents(
+  } catch (error) {
+    console.error(`Error backing up file with ID ${itemId}:`, error);
+  }
+};
+
+const backupFolderContents = async (
+  hubId,
+  projectId,
+  folderId,
+  archive,
+  basePath,
+  accessToken
+) => {
+  try {
+    const folderContents = await withTimeout(
+      service.getProjectContents(hubId, projectId, folderId, accessToken),
+      15000
+    );
+    for (const item of folderContents) {
+      const itemName = sanitizeName(item.attributes?.displayName);
+      const itemPath = basePath ? `${basePath}/${itemName}` : itemName;
+      if (item.type === "folders") {
+        // Recursively back up folder contents
+        await backupFolderContents(
+          hubId,
+          projectId,
+          item.id,
+          archive,
+          itemPath,
+          accessToken
+        );
+      } else if (item.type === "items") {
+        // Back up the file contents
+        await withTimeout(
+          backupFileContent(
             hubId,
             projectId,
             item.id,
             archive,
             itemPath,
             accessToken
-          );
-        } else if (item.type === "items") {
-          await withTimeout(
-            backupFileContent(
-              hubId,
-              projectId,
-              item.id,
-              archive,
-              itemPath,
-              accessToken
-            ),
-            15000
-          );
-        }
+          ),
+          15000
+        );
       }
-    } catch (error) {
-      console.error("Error backing up folder contents:", error);
     }
-  };
+  } catch (error) {
+    console.error("Error backing up folder contents:", error);
+  }
+};
 
 service.backupSpecificData = async (
   req,
@@ -563,9 +499,12 @@ service.backupSpecificData = async (
 
 service.getItemVersions = async (projectId, itemId, accessToken) => {
   try {
-      const resp = await withTimeout(dataManagementClient.getItemVersions(accessToken, projectId, itemId), 15000);
-      return resp.data;
+    const resp = await withTimeout(
+      dataManagementClient.getItemVersions(accessToken, projectId, itemId),
+      15000
+    );
+    return resp.data;
   } catch (err) {
-      console.log(err);
+    console.log(err);
   }
 };
